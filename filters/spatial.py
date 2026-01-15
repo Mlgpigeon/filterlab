@@ -68,13 +68,96 @@ def apply_sobel(img, gray, params):
     return np.uint8(np.sqrt(sobel_x**2 + sobel_y**2))
 
 
+def _to_gray_u8(img, gray):
+    """Asegura una imagen en gris uint8 para operaciones puntuales."""
+    g = gray
+    if g is None:
+        if len(img.shape) == 3:
+            g = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        else:
+            g = img
+    if g.dtype != np.uint8:
+        g = cv2.normalize(g, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    return g
+
+
+def apply_bilateral(img, gray, params):
+    """Suavizado preservando bordes (bilateral)."""
+    g = _to_gray_u8(img, gray)
+    d = int(params.get("d", 9))
+    sigma_color = float(params.get("sigmaColor", 75))
+    sigma_space = float(params.get("sigmaSpace", 75))
+    return cv2.bilateralFilter(g, d, sigma_color, sigma_space)
+
+
+def apply_normalize(img, gray, params):
+    """Normaliza intensidades al rango 0-255."""
+    g = _to_gray_u8(img, gray)
+    return cv2.normalize(g, None, 0, 255, cv2.NORM_MINMAX)
+
+
+def apply_log_transform(img, gray, params):
+    """Transformación logarítmica (realce de sombras)."""
+    g = _to_gray_u8(img, gray).astype(np.float32)
+    gain = float(params.get("gain", 255))
+    out = np.log1p(g)
+    out = out / (out.max() + 1e-8)
+    out = (out * gain).clip(0, 255).astype(np.uint8)
+    return out
+
+
+def apply_gamma(img, gray, params):
+    """Corrección gamma mediante LUT. gamma_x100=80 equivale a gamma=0.80"""
+    g = _to_gray_u8(img, gray)
+    gamma_x100 = float(params.get("gamma_x100", 80))
+    gamma = max(gamma_x100 / 100.0, 0.01)
+    lut = (np.power(np.arange(256, dtype=np.float32) / 255.0, gamma) * 255.0)
+    lut = np.clip(lut, 0, 255).astype(np.uint8)
+    return cv2.LUT(g, lut)
+
+
+def apply_unsharp(img, gray, params):
+    """Unsharp mask: realce de detalle controlado."""
+    g = _to_gray_u8(img, gray)
+    sigma = float(params.get("sigma_x10", 10)) / 10.0
+    amount = float(params.get("amount_x100", 120)) / 100.0
+    blur = cv2.GaussianBlur(g, (0, 0), sigmaX=sigma, sigmaY=sigma)
+    return cv2.addWeighted(g, 1.0 + amount, blur, -amount, 0)
+
+
+def apply_sobel_x(img, gray, params):
+    """Sobel en X."""
+    g = _to_gray_u8(img, gray)
+    k = int(params.get("kernel_size", 3))
+    k = k if k % 2 == 1 else k + 1
+    sx = cv2.Sobel(g, cv2.CV_64F, 1, 0, ksize=k)
+    sx = np.uint8(np.absolute(sx))
+    return cv2.normalize(sx, None, 0, 255, cv2.NORM_MINMAX)
+
+
+def apply_sobel_y(img, gray, params):
+    """Sobel en Y."""
+    g = _to_gray_u8(img, gray)
+    k = int(params.get("kernel_size", 3))
+    k = k if k % 2 == 1 else k + 1
+    sy = cv2.Sobel(g, cv2.CV_64F, 0, 1, ksize=k)
+    sy = np.uint8(np.absolute(sy))
+    return cv2.normalize(sy, None, 0, 255, cv2.NORM_MINMAX)
+
 # Mapeo de nombres a funciones
 SPATIAL_FILTERS = {
-    "gaussiano": apply_gaussiano,
+"gaussiano": apply_gaussiano,
     "mediana": apply_mediana,
     "clahe": apply_clahe,
     "canny": apply_canny,
     "otsu": apply_otsu,
     "laplaciano": apply_laplaciano,
     "sobel": apply_sobel,
+    "bilateral": apply_bilateral,
+    "normalize": apply_normalize,
+    "log_transform": apply_log_transform,
+    "gamma": apply_gamma,
+    "unsharp": apply_unsharp,
+    "sobel_x": apply_sobel_x,
+    "sobel_y": apply_sobel_y,
 }

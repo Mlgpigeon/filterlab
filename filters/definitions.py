@@ -54,6 +54,57 @@ FILTROS_ESPACIALES = {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
         }
     }
+    ,
+    "bilateral": {
+        "nombre": "Bilateral",
+        "descripcion": "Suaviza preservando bordes (reduce ruido sin emborronar contornos).",
+        "params": {
+            "d": {"min": 1, "max": 25, "default": 9, "step": 2, "label": "Diámetro (d)"},
+            "sigmaColor": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Color"},
+            "sigmaSpace": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Space"}
+        }
+    },
+    "normalize": {
+        "nombre": "Normalizar (0-255)",
+        "descripcion": "Reescala intensidades al rango completo (mejora contraste global).",
+        "params": {}
+    },
+    "log_transform": {
+        "nombre": "Transformación logarítmica",
+        "descripcion": "Expande intensidades bajas: aparece detalle en zonas oscuras.",
+        "params": {
+            "gain": {"min": 1, "max": 255, "default": 255, "step": 1, "label": "Ganancia"}
+        }
+    },
+    "gamma": {
+        "nombre": "Corrección gamma",
+        "descripcion": "Ajusta rango dinámico: γ<1 aclara sombras, γ>1 oscurece sombras.",
+        "params": {
+            "gamma_x100": {"min": 10, "max": 300, "default": 80, "step": 1, "label": "Gamma x100"}
+        }
+    },
+    "unsharp": {
+        "nombre": "Unsharp Mask (enfoque)",
+        "descripcion": "Aumenta nitidez: imagen + k*(imagen - blur).",
+        "params": {
+            "sigma_x10": {"min": 1, "max": 50, "default": 10, "step": 1, "label": "Sigma x10"},
+            "amount_x100": {"min": 0, "max": 300, "default": 120, "step": 1, "label": "Cantidad x100"}
+        }
+    },
+    "sobel_x": {
+        "nombre": "Sobel X",
+        "descripcion": "Gradiente horizontal (resalta bordes verticales).",
+        "params": {
+            "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "sobel_y": {
+        "nombre": "Sobel Y",
+        "descripcion": "Gradiente vertical (resalta bordes horizontales).",
+        "params": {
+            "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
+        }
+    }
 }
 
 FILTROS_MORFOLOGICOS = {
