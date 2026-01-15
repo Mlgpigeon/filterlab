@@ -1,8 +1,8 @@
 @echo off
-title Filtros VA - UNIR
+title FilterLab - Vision Artificial UNIR
 echo ============================================
-echo   Explorador de Filtros - Vision Artificial
-echo   UNIR - Trabajo Grupal
+echo   FilterLab - Explorador de Filtros
+echo   Vision Artificial - UNIR 2025
 echo ============================================
 echo.
 

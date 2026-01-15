@@ -1,82 +1,123 @@
-# 🔬 Explorador de Filtros Espaciales y Morfológicos
+# 🔬 FilterLab
 
-Aplicación interactiva para experimentar con filtros de procesamiento de imagen.
+Aplicación interactiva para explorar filtros espaciales y morfológicos.  
 **Trabajo Grupal - Visión Artificial UNIR**
+
+## 📁 Estructura del Proyecto
+
+```
+filterlab/
+├── app.py                  # Punto de entrada principal
+├── requirements.txt        # Dependencias
+├── run.bat                 # Script de ejecución (Windows)
+├── README.md
+│
+├── filters/                # Paquete de filtros
+│   ├── __init__.py
+│   ├── definitions.py      # Configuración de filtros (nombres, params)
+│   ├── spatial.py          # Implementación filtros espaciales
+│   └── morphological.py    # Implementación filtros morfológicos
+│
+├── core/                   # Paquete de procesamiento
+│   ├── __init__.py
+│   ├── processor.py        # Aplicación de filtros
+│   └── utils.py            # Utilidades de imagen
+│
+└── ui/                     # Paquete de interfaz
+    ├── __init__.py
+    ├── sidebar.py          # Panel lateral con filtros
+    └── components.py       # Visualización y cola
+```
 
 ## 🚀 Instalación y Ejecución
 
-### Requisitos
-- Python 3.8+
-- pip
-
-### Instalar dependencias
-
+### Opción 1: Script automático (Windows)
 ```bash
-pip install streamlit opencv-python numpy pillow
+run.bat
 ```
 
-### Ejecutar la aplicación
-
+### Opción 2: Manual
 ```bash
+# Crear entorno virtual
+python -m venv .venv
+
+# Activar entorno
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Ejecutar
 streamlit run app.py
 ```
 
-Se abrirá automáticamente en tu navegador en `http://localhost:8501`
+Se abrirá automáticamente en `http://localhost:8501`
+
+## ✨ Características
+
+- **Cola de filtros**: Panel derecho muestra filtros activos y su orden
+- **Sin duplicados**: Solo 1 instancia de cada filtro
+- **Tiempo real**: Cambios en parámetros se reflejan inmediatamente
+- **Reordenar**: Sube/baja filtros en la cola
 
 ## 📋 Filtros Disponibles
 
 ### Filtros Espaciales
 | Filtro | Descripción |
 |--------|-------------|
-| **Gaussiano** | Suavizado mediante convolución gaussiana. Reduce ruido. |
-| **Mediana** | Elimina ruido sal y pimienta preservando bordes. |
-| **CLAHE** | Ecualización adaptativa de histograma con límite de contraste. |
-| **Canny** | Detección de bordes mediante gradiente e histéresis. |
-| **Otsu** | Binarización automática óptima. |
+| Gaussiano | Suavizado, reduce ruido |
+| Mediana | Elimina ruido sal y pimienta |
+| CLAHE | Ecualización adaptativa de histograma |
+| Canny | Detección de bordes |
+| Otsu | Binarización automática |
+| Laplaciano | Bordes (2ª derivada) |
+| Sobel | Bordes direccionales |
 
 ### Filtros Morfológicos
 | Filtro | Descripción |
 |--------|-------------|
-| **Apertura** | Erosión + Dilatación. Elimina objetos pequeños. |
-| **Clausura** | Dilatación + Erosión. Cierra huecos pequeños. |
-| **White Top-Hat** | Resalta objetos brillantes sobre fondo oscuro. |
-| **Black Top-Hat** | Resalta objetos oscuros sobre fondo brillante. |
-| **Gradiente** | Dilatación - Erosión. Detecta contornos. |
-| **Erosión** | Reduce/adelgaza objetos. |
-| **Dilatación** | Expande/engrosa objetos. |
+| Erosión | Reduce objetos |
+| Dilatación | Expande objetos |
+| Apertura | Elimina objetos pequeños |
+| Clausura | Cierra huecos |
+| White Top-Hat | Resalta brillante sobre oscuro |
+| Black Top-Hat | Resalta oscuro sobre brillante |
+| Gradiente | Detecta contornos |
 
-## 🎮 Cómo usar
+## 🎮 Cómo Usar
 
-1. **Cargar imagen**: Usa el panel lateral para subir una imagen (PNG, JPG, etc.)
-2. **Seleccionar filtros**: Expande cada filtro, ajusta parámetros y pulsa "Añadir"
-3. **Ver resultado**: La imagen procesada se actualiza en tiempo real
-4. **Orden importa**: Los filtros se aplican en el orden que los añades
-5. **Descargar**: Pulsa el botón de descarga para guardar el resultado
+1. **Cargar imagen** desde el panel lateral
+2. **Añadir filtros** - cada filtro solo puede añadirse una vez
+3. **Ajustar parámetros** - los cambios se aplican en tiempo real
+4. **Reordenar** con ⬆️⬇️ en la cola de la derecha
+5. **Descargar** el resultado
 
-## 💡 Consejos
+## 🔧 Añadir Nuevos Filtros
 
-- **Para imágenes ruidosas**: Empieza con Mediana o Gaussiano
-- **Para realzar contraste**: Usa CLAHE antes de otros filtros
-- **Para detectar objetos**: Combina CLAHE → Otsu → Apertura
-- **Para bordes**: Gaussiano → Canny o Gradiente Morfológico
-- **Para objetos brillantes**: White Top-Hat funciona muy bien en rayos X
+Para añadir un nuevo filtro espacial:
 
-## 📁 Estructura del proyecto
-
-```
-filter_app/
-├── app.py          # Aplicación principal
-├── README.md       # Este archivo
-└── requirements.txt # Dependencias
+1. Añadir definición en `filters/definitions.py`:
+```python
+FILTROS_ESPACIALES["mi_filtro"] = {
+    "nombre": "Mi Filtro",
+    "descripcion": "Descripción del filtro",
+    "params": {
+        "param1": {"min": 0, "max": 100, "default": 50, "step": 1, "label": "Parámetro 1"}
+    }
+}
 ```
 
-## 🔧 Dependencias
+2. Implementar en `filters/spatial.py`:
+```python
+def apply_mi_filtro(img, gray, params):
+    param1 = params.get("param1", 50)
+    # ... lógica del filtro
+    return result
 
-```
-streamlit>=1.28.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-pillow>=10.0.0
+SPATIAL_FILTERS["mi_filtro"] = apply_mi_filtro
 ```
 
 ---
