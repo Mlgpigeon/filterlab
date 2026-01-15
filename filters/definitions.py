@@ -1,12 +1,26 @@
 """
-Definiciones de filtros disponibles en FilterLab.
-Cada filtro tiene: nombre, descripción y parámetros configurables.
+Definiciones de filtros disponibles en FilterLab - VERSIÓN CORREGIDA COMPLETA.
+
+CAMBIOS ESPACIALES:
+- Añadido filtro "normalize_percentile" que SIEMPRE mejora el contraste
+- Mejoradas las descripciones
+- Añadida advertencia en "normalize"
+- Step de 2 para kernels (solo impares son válidos)
+
+CAMBIOS MORFOLÓGICOS:
+- Kernel default reducido (3 en vez de 5, 5 en vez de 9)
+- Rangos máximos reducidos (15 en vez de 21)
+- Descripciones más claras
+- Iterations max reducido a 5
 """
 
 FILTROS_ESPACIALES = {
+    # =========================================================================
+    # SUAVIZADO
+    # =========================================================================
     "gaussiano": {
         "nombre": "Gaussiano",
-        "descripcion": "Suavizado mediante convolución gaussiana. Reduce ruido.",
+        "descripcion": "Suavizado gaussiano. Reduce ruido pero difumina bordes.",
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 5, "step": 1, "label": "Tamaño kernel"},
             "sigma": {"min": 0.1, "max": 10.0, "default": 1.0, "step": 0.1, "label": "Sigma"}
@@ -16,20 +30,72 @@ FILTROS_ESPACIALES = {
         "nombre": "Mediana",
         "descripcion": "Elimina ruido sal y pimienta preservando bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 31, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 31, "default": 5, "step": 2, "label": "Tamaño kernel"}
         }
     },
+    "bilateral": {
+        "nombre": "Bilateral",
+        "descripcion": "Suaviza preservando bordes. Combina proximidad y similitud de color.",
+        "params": {
+            "d": {"min": 1, "max": 25, "default": 9, "step": 1, "label": "Diámetro (d)"},
+            "sigma_color": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Color"},
+            "sigma_space": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Space"}
+        }
+    },
+    
+    # =========================================================================
+    # MEJORA DE CONTRASTE
+    # =========================================================================
     "clahe": {
         "nombre": "CLAHE",
-        "descripcion": "Ecualización adaptativa de histograma con límite de contraste.",
+        "descripcion": "Ecualización adaptativa. Mejora contraste local sin saturar.",
         "params": {
             "clip_limit": {"min": 1.0, "max": 10.0, "default": 2.0, "step": 0.5, "label": "Clip Limit"},
             "tile_size": {"min": 1, "max": 16, "default": 8, "step": 1, "label": "Tile Size"}
         }
     },
+    "normalize": {
+        "nombre": "Normalizar (Min-Max)",
+        "descripcion": "⚠️ Estira rango a [0-255]. Sin efecto si ya usa rango completo.",
+        "params": {}
+    },
+    "normalize_percentile": {
+        "nombre": "Normalizar (Percentil)",
+        "descripcion": "✅ SIEMPRE mejora contraste. Recorta extremos y estira.",
+        "params": {
+            "low_percentile": {"min": 0.0, "max": 10.0, "default": 1.0, "step": 0.5, "label": "Percentil bajo (%)"},
+            "high_percentile": {"min": 90.0, "max": 100.0, "default": 99.0, "step": 0.5, "label": "Percentil alto (%)"}
+        }
+    },
+    "log_transform": {
+        "nombre": "Transformación Log",
+        "descripcion": "Expande detalles en zonas oscuras. Para alto rango dinámico.",
+        "params": {
+            "gain": {"min": 1, "max": 255, "default": 255, "step": 1, "label": "Ganancia"}
+        }
+    },
+    "gamma": {
+        "nombre": "Corrección Gamma",
+        "descripcion": "γ<1 aclara sombras, γ>1 las oscurece. γ=1 sin cambio.",
+        "params": {
+            "gamma": {"min": 0.1, "max": 3.0, "default": 0.8, "step": 0.05, "label": "Gamma (γ)"}
+        }
+    },
+    "unsharp": {
+        "nombre": "Unsharp Mask",
+        "descripcion": "Aumenta nitidez restando versión difuminada.",
+        "params": {
+            "sigma": {"min": 0.1, "max": 5.0, "default": 1.0, "step": 0.1, "label": "Sigma"},
+            "amount": {"min": 0.0, "max": 3.0, "default": 1.2, "step": 0.1, "label": "Amount"}
+        }
+    },
+    
+    # =========================================================================
+    # DETECCIÓN DE BORDES
+    # =========================================================================
     "canny": {
         "nombre": "Canny",
-        "descripcion": "Detecta bordes mediante gradiente e histéresis.",
+        "descripcion": "Detector de bordes con histéresis. Resultado binario.",
         "params": {
             "low_threshold": {"min": 0, "max": 255, "default": 50, "step": 1, "label": "Umbral bajo"},
             "high_threshold": {"min": 0, "max": 255, "default": 150, "step": 1, "label": "Umbral alto"}
@@ -37,127 +103,89 @@ FILTROS_ESPACIALES = {
     },
     "otsu": {
         "nombre": "Otsu",
-        "descripcion": "Binarización automática óptima.",
+        "descripcion": "Binarización automática. Umbral óptimo para separar fondo/objeto.",
         "params": {}
     },
     "laplaciano": {
         "nombre": "Laplaciano",
-        "descripcion": "Detecta bordes mediante segunda derivada.",
+        "descripcion": "Bordes por segunda derivada. Sensible al ruido.",
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "sobel": {
         "nombre": "Sobel",
-        "descripcion": "Detecta bordes horizontales y verticales.",
+        "descripcion": "Magnitud del gradiente. Combina bordes H y V.",
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 1, "label": "Tamaño kernel"}
-        }
-    }
-    ,
-    "bilateral": {
-        "nombre": "Bilateral",
-        "descripcion": "Suaviza preservando bordes (reduce ruido sin emborronar contornos).",
-        "params": {
-            "d": {"min": 1, "max": 25, "default": 9, "step": 1, "label": "Diámetro (d)"},
-            "sigma_color": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Color"},
-            "sigma_space": {"min": 1, "max": 200, "default": 75, "step": 1, "label": "Sigma Space"}
-        }
-    },
-    "normalize": {
-        "nombre": "Normalizar (0-255)",
-        "descripcion": "Reescala intensidades al rango completo (mejora contraste global).",
-        "params": {}
-    },
-    "log_transform": {
-        "nombre": "Transformación logarítmica",
-        "descripcion": "Expande intensidades bajas (aparece detalle en zonas oscuras).",
-        "params": {
-            "gain": {"min": 1, "max": 255, "default": 255, "step": 1, "label": "Ganancia"}
-        }
-    },
-    "gamma": {
-        "nombre": "Corrección gamma",
-        "descripcion": "Ajusta el rango dinámico: γ<1 aclara sombras, γ>1 oscurece sombras.",
-        "params": {
-            "gamma": {"min": 0.1, "max": 3.0, "default": 0.8, "step": 0.05, "label": "Gamma"}
-        }
-    },
-    "unsharp": {
-        "nombre": "Unsharp Mask (Enfoque)",
-        "descripcion": "Aumenta nitidez: imagen + k*(imagen - blur).",
-        "params": {
-            "sigma": {"min": 0.1, "max": 5.0, "default": 1.0, "step": 0.1, "label": "Sigma (blur)"},
-            "amount": {"min": 0.0, "max": 3.0, "default": 1.2, "step": 0.1, "label": "Amount"}
         }
     },
     "sobel_x": {
         "nombre": "Sobel X",
-        "descripcion": "Gradiente horizontal (resalta bordes verticales).",
+        "descripcion": "Gradiente horizontal. Resalta bordes verticales.",
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "sobel_y": {
         "nombre": "Sobel Y",
-        "descripcion": "Gradiente vertical (resalta bordes horizontales).",
+        "descripcion": "Gradiente vertical. Resalta bordes horizontales.",
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     }
-
 }
 
 FILTROS_MORFOLOGICOS = {
     "erosion": {
         "nombre": "Erosión",
-        "descripcion": "Reduce objetos. Elimina píxeles en bordes.",
+        "descripcion": "Reduce objetos eliminando píxeles en bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 5, "step": 1, "label": "Tamaño kernel"},
-            "iterations": {"min": 1, "max": 10, "default": 1, "step": 1, "label": "Iteraciones"}
+            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
     "dilatacion": {
         "nombre": "Dilatación",
-        "descripcion": "Expande objetos. Añade píxeles en bordes.",
+        "descripcion": "Expande objetos añadiendo píxeles en bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 5, "step": 1, "label": "Tamaño kernel"},
-            "iterations": {"min": 1, "max": 10, "default": 1, "step": 1, "label": "Iteraciones"}
+            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
     "apertura": {
         "nombre": "Apertura",
-        "descripcion": "Erosión + Dilatación. Elimina objetos pequeños.",
+        "descripcion": "Erosión + Dilatación. Elimina ruido pequeño.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "clausura": {
         "nombre": "Clausura",
         "descripcion": "Dilatación + Erosión. Cierra huecos pequeños.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "tophat": {
         "nombre": "White Top-Hat",
-        "descripcion": "Resalta objetos brillantes sobre fondo oscuro.",
+        "descripcion": "Extrae brillos menores que el kernel. Normalizado.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 9, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 15, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "blackhat": {
         "nombre": "Black Top-Hat",
-        "descripcion": "Resalta objetos oscuros sobre fondo brillante.",
+        "descripcion": "Extrae oscuros menores que el kernel. Normalizado.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 9, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 15, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "gradiente": {
         "nombre": "Gradiente Morfológico",
-        "descripcion": "Dilatación - Erosión. Detecta contornos.",
+        "descripcion": "Dilatación - Erosión. Detecta contornos. Normalizado.",
         "params": {
-            "kernel_size": {"min": 1, "max": 21, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 11, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     }
 }
