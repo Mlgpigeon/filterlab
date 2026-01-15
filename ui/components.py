@@ -6,6 +6,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 import io
 
 from filters import get_filter_info
@@ -129,6 +130,126 @@ def _create_comparison_histogram(img_orig, img_result, channel='gray'):
     return fig
 
 
+def _create_luminance_histogram(img_orig, img_result):
+    """
+    Crea histograma comparativo de luminancia/valor.
+    Muestra Y (YUV), V (HSV) y L (LAB).
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+    fig.patch.set_facecolor('#0E1117')
+    
+    # Asegurar RGB
+    img_orig = _ensure_rgb(img_orig)
+    img_result = _ensure_rgb(img_result)
+    
+    # Convertir a diferentes espacios de color
+    # OpenCV usa BGR, así que convertimos
+    orig_bgr = img_orig[:, :, ::-1]  # RGB a BGR
+    result_bgr = img_result[:, :, ::-1]
+    
+    channels = [
+        ('Y (Luminancia YUV)', cv2.COLOR_BGR2YUV, 0, '#FFD700'),
+        ('V (Valor HSV)', cv2.COLOR_BGR2HSV, 2, '#FF6B6B'),
+        ('L (Lightness LAB)', cv2.COLOR_BGR2LAB, 0, '#4ECDC4'),
+    ]
+    
+    for ax, (title, color_space, ch_idx, color) in zip(axes, channels):
+        ax.set_facecolor('#0E1117')
+        
+        # Extraer canal
+        orig_converted = cv2.cvtColor(orig_bgr, color_space)
+        result_converted = cv2.cvtColor(result_bgr, color_space)
+        
+        orig_channel = orig_converted[:, :, ch_idx].flatten()
+        result_channel = result_converted[:, :, ch_idx].flatten()
+        
+        # Histogramas
+        hist_orig = np.histogram(orig_channel, bins=256, range=(0, 256))[0]
+        hist_result = np.histogram(result_channel, bins=256, range=(0, 256))[0]
+        
+        ax.fill_between(range(256), hist_orig, alpha=0.3, color='#888888', label='Original')
+        ax.plot(hist_orig, color='#888888', linewidth=1, linestyle='--', alpha=0.7)
+        
+        ax.fill_between(range(256), hist_result, alpha=0.5, color=color, label='Resultado')
+        ax.plot(hist_result, color=color, linewidth=1.5)
+        
+        ax.set_title(title, color='white', fontsize=11, fontweight='bold')
+        ax.set_xlabel('Intensidad', color='gray')
+        ax.set_ylabel('Frecuencia', color='gray')
+        ax.set_xlim(0, 255)
+        ax.tick_params(colors='gray')
+        ax.spines['bottom'].set_color('gray')
+        ax.spines['left'].set_color('gray')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.legend(loc='upper right', facecolor='#1E1E1E', edgecolor='gray', labelcolor='white', fontsize=8)
+    
+    plt.tight_layout()
+    return fig
+
+
+def _create_single_luminance_histogram(img_orig, img_result, channel_type='Y'):
+    """
+    Crea histograma individual para un canal de luminancia específico.
+    """
+    fig, ax = plt.subplots(figsize=(8, 4))
+    fig.patch.set_facecolor('#0E1117')
+    ax.set_facecolor('#0E1117')
+    
+    img_orig = _ensure_rgb(img_orig)
+    img_result = _ensure_rgb(img_result)
+    
+    orig_bgr = img_orig[:, :, ::-1]
+    result_bgr = img_result[:, :, ::-1]
+    
+    channel_config = {
+        'Y': ('Luminancia Y (YUV)', cv2.COLOR_BGR2YUV, 0, '#FFD700'),
+        'V': ('Valor V (HSV)', cv2.COLOR_BGR2HSV, 2, '#FF6B6B'),
+        'L': ('Lightness L (LAB)', cv2.COLOR_BGR2LAB, 0, '#4ECDC4'),
+    }
+    
+    title, color_space, ch_idx, color = channel_config.get(channel_type, channel_config['Y'])
+    
+    orig_converted = cv2.cvtColor(orig_bgr, color_space)
+    result_converted = cv2.cvtColor(result_bgr, color_space)
+    
+    orig_channel = orig_converted[:, :, ch_idx].flatten()
+    result_channel = result_converted[:, :, ch_idx].flatten()
+    
+    hist_orig = np.histogram(orig_channel, bins=256, range=(0, 256))[0]
+    hist_result = np.histogram(result_channel, bins=256, range=(0, 256))[0]
+    
+    ax.fill_between(range(256), hist_orig, alpha=0.3, color='#888888', label='Original')
+    ax.plot(hist_orig, color='#888888', linewidth=1, linestyle='--', alpha=0.7)
+    
+    ax.fill_between(range(256), hist_result, alpha=0.5, color=color, label='Resultado')
+    ax.plot(hist_result, color=color, linewidth=1.5)
+    
+    # Añadir estadísticas
+    orig_mean, orig_std = np.mean(orig_channel), np.std(orig_channel)
+    result_mean, result_std = np.mean(result_channel), np.std(result_channel)
+    
+    stats_text = f'Original: μ={orig_mean:.1f}, σ={orig_std:.1f}\nResultado: μ={result_mean:.1f}, σ={result_std:.1f}'
+    ax.text(0.98, 0.98, stats_text, transform=ax.transAxes, fontsize=9,
+            verticalalignment='top', horizontalalignment='right',
+            bbox=dict(boxstyle='round', facecolor='#1E1E1E', edgecolor='gray', alpha=0.9),
+            color='white')
+    
+    ax.set_title(title, color='white', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Intensidad', color='gray')
+    ax.set_ylabel('Frecuencia', color='gray')
+    ax.set_xlim(0, 255)
+    ax.tick_params(colors='gray')
+    ax.spines['bottom'].set_color('gray')
+    ax.spines['left'].set_color('gray')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.legend(loc='upper left', facecolor='#1E1E1E', edgecolor='gray', labelcolor='white')
+    
+    plt.tight_layout()
+    return fig
+
+
 def _create_stats_figure(img_orig, img_result):
     """
     Crea figura con estadísticas comparativas.
@@ -198,9 +319,10 @@ def render_analysis_section(img_original, img_result):
         st.caption("Histogramas y estadísticas con descarga individual")
         
         # Tabs para organizar los gráficos
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "🎨 RGB Comparativo", 
             "⬜ Escala de Grises", 
+            "💡 Luminancia",
             "📈 Por Canal",
             "📋 Estadísticas"
         ])
@@ -247,8 +369,55 @@ def render_analysis_section(img_original, img_result):
                     use_container_width=True
                 )
         
-        # Tab 3: Por canal individual
+        # Tab 3: Luminancia (Y, V, L)
         with tab3:
+            st.caption("Canales de luminancia en diferentes espacios de color")
+            
+            # Vista general con los 3 canales
+            fig_lum_all = _create_luminance_histogram(img_original, img_result)
+            st.pyplot(fig_lum_all)
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                st.download_button(
+                    "📥 Descargar Comparativa YVL",
+                    data=_fig_to_bytes(fig_lum_all),
+                    file_name="histograma_luminancia_YVL.png",
+                    mime="image/png",
+                    key="dl_lum_all",
+                    use_container_width=True
+                )
+            
+            st.markdown("---")
+            st.markdown("**Detalle por canal:**")
+            
+            lum_channel = st.selectbox(
+                "Seleccionar canal de luminancia:",
+                ['Y', 'V', 'L'],
+                format_func=lambda x: {
+                    'Y': '🌟 Y - Luminancia (YUV)', 
+                    'V': '💡 V - Valor (HSV)', 
+                    'L': '☀️ L - Lightness (LAB)'
+                }[x],
+                key="lum_channel_select"
+            )
+            
+            fig_lum_single = _create_single_luminance_histogram(img_original, img_result, lum_channel)
+            st.pyplot(fig_lum_single)
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                st.download_button(
+                    f"📥 Descargar Canal {lum_channel}",
+                    data=_fig_to_bytes(fig_lum_single),
+                    file_name=f"histograma_luminancia_{lum_channel}.png",
+                    mime="image/png",
+                    key=f"dl_lum_{lum_channel}",
+                    use_container_width=True
+                )
+        
+        # Tab 4: Por canal RGB individual
+        with tab4:
             channel_selected = st.selectbox(
                 "Seleccionar canal:",
                 ['red', 'green', 'blue'],
@@ -270,8 +439,8 @@ def render_analysis_section(img_original, img_result):
                     use_container_width=True
                 )
         
-        # Tab 4: Estadísticas
-        with tab4:
+        # Tab 5: Estadísticas
+        with tab5:
             fig_stats = _create_stats_figure(img_original, img_result)
             st.pyplot(fig_stats)
             
