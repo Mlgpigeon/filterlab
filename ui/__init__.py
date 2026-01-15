@@ -9,6 +9,7 @@ from .components import (
     render_placeholder,
     render_filter_queue,
     render_footer,
+    render_analysis_section,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "render_placeholder",
     "render_filter_queue",
     "render_footer",
+    "render_analysis_section",
 ]

@@ -27,6 +27,7 @@ from ui import (
     render_placeholder,
     render_filter_queue,
     render_footer,
+    render_analysis_section,
 )
 
 # ============================================================================
@@ -94,6 +95,9 @@ with col_main:
         
         # Botón de descarga
         render_download_button(result_img)
+        
+        # Sección de análisis (histogramas y gráficos)
+        render_analysis_section(img_rgb, result_img)
     else:
         render_placeholder()
 
