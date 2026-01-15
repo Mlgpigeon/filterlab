@@ -1,8 +1,6 @@
 """
-Aplicación interactiva para aplicar filtros espaciales y morfológicos.
-Trabajo Grupal - Visión Artificial UNIR
-
-Ejecutar con: streamlit run app.py
+FilterLab - Explorador de Filtros de Imagen
+Versión mejorada con cola de filtros, sin duplicados y actualización en tiempo real
 """
 
 import streamlit as st
@@ -11,17 +9,16 @@ import numpy as np
 from PIL import Image
 import io
 
-# Configuración de la página
-st.set_page_config(
-    page_title="Filtros de Imagen - VA UNIR",
-    page_icon="🔬",
-    layout="wide"
-)
+# ============================================================================
+# CONFIGURACIÓN DE PÁGINA
+# ============================================================================
 
-# Título
-st.title("🔬 Explorador de Filtros Espaciales y Morfológicos")
-st.markdown("*Trabajo Grupal - Visión Artificial UNIR*")
-st.markdown("---")
+st.set_page_config(
+    page_title="FilterLab",
+    page_icon="🔬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # ============================================================================
 # DEFINICIÓN DE FILTROS
@@ -29,67 +26,108 @@ st.markdown("---")
 
 FILTROS_ESPACIALES = {
     "gaussiano": {
-        "nombre": "Filtro Gaussiano",
-        "descripcion": "Suavizado mediante convolución con máscara gaussiana. Reduce ruido gaussiano.",
-        "params": ["kernel_size", "sigma"]
+        "nombre": "Gaussiano",
+        "descripcion": "Suavizado mediante convolución gaussiana. Reduce ruido.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 31, "default": 5, "step": 2, "label": "Tamaño kernel"},
+            "sigma": {"min": 0.1, "max": 10.0, "default": 1.0, "step": 0.1, "label": "Sigma"}
+        }
     },
     "mediana": {
-        "nombre": "Filtro de Mediana",
-        "descripcion": "Sustituye cada píxel por la mediana de su vecindad. Elimina ruido sal y pimienta.",
-        "params": ["kernel_size"]
+        "nombre": "Mediana",
+        "descripcion": "Elimina ruido sal y pimienta preservando bordes.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 31, "default": 5, "step": 2, "label": "Tamaño kernel"}
+        }
     },
     "clahe": {
         "nombre": "CLAHE",
         "descripcion": "Ecualización adaptativa de histograma con límite de contraste.",
-        "params": ["clip_limit", "tile_size"]
+        "params": {
+            "clip_limit": {"min": 1.0, "max": 10.0, "default": 2.0, "step": 0.5, "label": "Clip Limit"},
+            "tile_size": {"min": 2, "max": 16, "default": 8, "step": 1, "label": "Tile Size"}
+        }
     },
     "canny": {
-        "nombre": "Detector de Bordes Canny",
-        "descripcion": "Detecta bordes mediante gradiente y umbralización por histéresis.",
-        "params": ["low_threshold", "high_threshold"]
+        "nombre": "Canny",
+        "descripcion": "Detecta bordes mediante gradiente e histéresis.",
+        "params": {
+            "low_threshold": {"min": 0, "max": 255, "default": 50, "step": 5, "label": "Umbral bajo"},
+            "high_threshold": {"min": 0, "max": 255, "default": 150, "step": 5, "label": "Umbral alto"}
+        }
     },
     "otsu": {
-        "nombre": "Umbralización Otsu",
-        "descripcion": "Binarización automática maximizando varianza inter-clase.",
-        "params": []
+        "nombre": "Otsu",
+        "descripcion": "Binarización automática óptima.",
+        "params": {}
+    },
+    "laplaciano": {
+        "nombre": "Laplaciano",
+        "descripcion": "Detecta bordes mediante segunda derivada.",
+        "params": {
+            "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "sobel": {
+        "nombre": "Sobel",
+        "descripcion": "Detecta bordes horizontales y verticales.",
+        "params": {
+            "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
+        }
     }
 }
 
 FILTROS_MORFOLOGICOS = {
-    "apertura": {
-        "nombre": "Apertura",
-        "descripcion": "Erosión + Dilatación. Elimina objetos pequeños preservando forma.",
-        "params": ["kernel_size"]
-    },
-    "clausura": {
-        "nombre": "Clausura",
-        "descripcion": "Dilatación + Erosión. Cierra huecos pequeños en objetos.",
-        "params": ["kernel_size"]
-    },
-    "tophat": {
-        "nombre": "White Top-Hat",
-        "descripcion": "Imagen - Apertura. Resalta objetos brillantes sobre fondo.",
-        "params": ["kernel_size"]
-    },
-    "blackhat": {
-        "nombre": "Black Top-Hat",
-        "descripcion": "Clausura - Imagen. Resalta objetos oscuros sobre fondo.",
-        "params": ["kernel_size"]
-    },
-    "gradiente": {
-        "nombre": "Gradiente Morfológico",
-        "descripcion": "Dilatación - Erosión. Detecta contornos de objetos.",
-        "params": ["kernel_size"]
-    },
     "erosion": {
         "nombre": "Erosión",
         "descripcion": "Reduce objetos. Elimina píxeles en bordes.",
-        "params": ["kernel_size", "iterations"]
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 5, "step": 2, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 10, "default": 1, "step": 1, "label": "Iteraciones"}
+        }
     },
     "dilatacion": {
         "nombre": "Dilatación",
         "descripcion": "Expande objetos. Añade píxeles en bordes.",
-        "params": ["kernel_size", "iterations"]
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 5, "step": 2, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 10, "default": 1, "step": 1, "label": "Iteraciones"}
+        }
+    },
+    "apertura": {
+        "nombre": "Apertura",
+        "descripcion": "Erosión + Dilatación. Elimina objetos pequeños.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 5, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "clausura": {
+        "nombre": "Clausura",
+        "descripcion": "Dilatación + Erosión. Cierra huecos pequeños.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 5, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "tophat": {
+        "nombre": "White Top-Hat",
+        "descripcion": "Resalta objetos brillantes sobre fondo oscuro.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 9, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "blackhat": {
+        "nombre": "Black Top-Hat",
+        "descripcion": "Resalta objetos oscuros sobre fondo brillante.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 9, "step": 2, "label": "Tamaño kernel"}
+        }
+    },
+    "gradiente": {
+        "nombre": "Gradiente Morfológico",
+        "descripcion": "Dilatación - Erosión. Detecta contornos.",
+        "params": {
+            "kernel_size": {"min": 3, "max": 21, "default": 5, "step": 2, "label": "Tamaño kernel"}
+        }
     }
 }
 
@@ -101,7 +139,7 @@ def apply_filter(img, filter_name, params):
     """Aplica un filtro específico a la imagen."""
     result = img.copy()
     
-    # Asegurar que la imagen esté en escala de grises para ciertos filtros
+    # Convertir a escala de grises si es necesario
     if len(result.shape) == 3:
         gray = cv2.cvtColor(result, cv2.COLOR_RGB2GRAY)
     else:
@@ -109,8 +147,8 @@ def apply_filter(img, filter_name, params):
     
     # FILTROS ESPACIALES
     if filter_name == "gaussiano":
-        k = params.get("kernel_size", 5)
-        k = k if k % 2 == 1 else k + 1  # Asegurar impar
+        k = int(params.get("kernel_size", 5))
+        k = k if k % 2 == 1 else k + 1
         sigma = params.get("sigma", 1.0)
         if len(result.shape) == 3:
             result = cv2.GaussianBlur(result, (k, k), sigma)
@@ -118,312 +156,417 @@ def apply_filter(img, filter_name, params):
             result = cv2.GaussianBlur(result, (k, k), sigma)
             
     elif filter_name == "mediana":
-        k = params.get("kernel_size", 5)
+        k = int(params.get("kernel_size", 5))
         k = k if k % 2 == 1 else k + 1
-        if len(result.shape) == 3:
-            result = cv2.medianBlur(result, k)
-        else:
-            result = cv2.medianBlur(result, k)
+        result = cv2.medianBlur(result if len(result.shape) == 3 else gray, k)
+        if len(img.shape) == 3 and len(result.shape) == 2:
+            result = cv2.cvtColor(result, cv2.COLOR_GRAY2RGB)
             
     elif filter_name == "clahe":
         clip = params.get("clip_limit", 2.0)
-        tile = params.get("tile_size", 8)
+        tile = int(params.get("tile_size", 8))
         clahe = cv2.createCLAHE(clipLimit=clip, tileGridSize=(tile, tile))
         if len(result.shape) == 3:
-            # Aplicar CLAHE en canal L de LAB
             lab = cv2.cvtColor(result, cv2.COLOR_RGB2LAB)
             lab[:,:,0] = clahe.apply(lab[:,:,0])
             result = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
         else:
-            result = clahe.apply(result)
+            result = clahe.apply(gray)
             
     elif filter_name == "canny":
-        low = params.get("low_threshold", 50)
-        high = params.get("high_threshold", 150)
+        low = int(params.get("low_threshold", 50))
+        high = int(params.get("high_threshold", 150))
         result = cv2.Canny(gray, low, high)
         
     elif filter_name == "otsu":
         _, result = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+    elif filter_name == "laplaciano":
+        k = int(params.get("kernel_size", 3))
+        k = k if k % 2 == 1 else k + 1
+        result = cv2.Laplacian(gray, cv2.CV_64F, ksize=k)
+        result = np.uint8(np.absolute(result))
+        
+    elif filter_name == "sobel":
+        k = int(params.get("kernel_size", 3))
+        k = k if k % 2 == 1 else k + 1
+        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=k)
+        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=k)
+        result = np.uint8(np.sqrt(sobelx**2 + sobely**2))
     
     # FILTROS MORFOLÓGICOS
+    elif filter_name == "erosion":
+        k = int(params.get("kernel_size", 5))
+        iterations = int(params.get("iterations", 1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
+        if len(result.shape) == 3:
+            result = cv2.erode(result, kernel, iterations=iterations)
+        else:
+            result = cv2.erode(gray, kernel, iterations=iterations)
+            
+    elif filter_name == "dilatacion":
+        k = int(params.get("kernel_size", 5))
+        iterations = int(params.get("iterations", 1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
+        if len(result.shape) == 3:
+            result = cv2.dilate(result, kernel, iterations=iterations)
+        else:
+            result = cv2.dilate(gray, kernel, iterations=iterations)
+            
     elif filter_name == "apertura":
-        k = params.get("kernel_size", 5)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+        k = int(params.get("kernel_size", 5))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
         if len(result.shape) == 3:
             result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel)
         else:
             result = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
             
     elif filter_name == "clausura":
-        k = params.get("kernel_size", 5)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+        k = int(params.get("kernel_size", 5))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
         if len(result.shape) == 3:
             result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
         else:
             result = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
             
     elif filter_name == "tophat":
-        k = params.get("kernel_size", 15)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
-        result = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, kernel)
-        
-    elif filter_name == "blackhat":
-        k = params.get("kernel_size", 15)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
-        result = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
-        
-    elif filter_name == "gradiente":
-        k = params.get("kernel_size", 3)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
-        result = cv2.morphologyEx(gray, cv2.MORPH_GRADIENT, kernel)
-        
-    elif filter_name == "erosion":
-        k = params.get("kernel_size", 3)
-        iters = params.get("iterations", 1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+        k = int(params.get("kernel_size", 9))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
         if len(result.shape) == 3:
-            result = cv2.erode(result, kernel, iterations=iters)
+            result = cv2.morphologyEx(result, cv2.MORPH_TOPHAT, kernel)
         else:
-            result = cv2.erode(gray, kernel, iterations=iters)
+            result = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, kernel)
             
-    elif filter_name == "dilatacion":
-        k = params.get("kernel_size", 3)
-        iters = params.get("iterations", 1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+    elif filter_name == "blackhat":
+        k = int(params.get("kernel_size", 9))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
         if len(result.shape) == 3:
-            result = cv2.dilate(result, kernel, iterations=iters)
+            result = cv2.morphologyEx(result, cv2.MORPH_BLACKHAT, kernel)
         else:
-            result = cv2.dilate(gray, kernel, iterations=iters)
+            result = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
+            
+    elif filter_name == "gradiente":
+        k = int(params.get("kernel_size", 5))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
+        if len(result.shape) == 3:
+            result = cv2.morphologyEx(result, cv2.MORPH_GRADIENT, kernel)
+        else:
+            result = cv2.morphologyEx(gray, cv2.MORPH_GRADIENT, kernel)
     
     return result
 
+
+def apply_filter_chain(img, filter_list):
+    """Aplica una cadena de filtros a la imagen."""
+    result = img.copy()
+    for filter_name, params in filter_list:
+        result = apply_filter(result, filter_name, params)
+    return result
+
+
+def get_filter_info(filter_name):
+    """Obtiene la información de un filtro."""
+    if filter_name in FILTROS_ESPACIALES:
+        return FILTROS_ESPACIALES[filter_name]
+    elif filter_name in FILTROS_MORFOLOGICOS:
+        return FILTROS_MORFOLOGICOS[filter_name]
+    return None
+
+
+def get_all_filters():
+    """Retorna todos los filtros disponibles."""
+    return {**FILTROS_ESPACIALES, **FILTROS_MORFOLOGICOS}
+
 # ============================================================================
-# INTERFAZ DE USUARIO
+# INICIALIZACIÓN DE SESSION STATE
 # ============================================================================
 
-# Inicializar estado de sesión
 if 'filtros_activos' not in st.session_state:
-    st.session_state.filtros_activos = []
-if 'params' not in st.session_state:
-    st.session_state.params = {}
+    st.session_state.filtros_activos = []  # Lista de filter_keys activos
 
-# Sidebar para cargar imagen
+if 'filter_params' not in st.session_state:
+    st.session_state.filter_params = {}  # Diccionario de parámetros por filtro
+
+# ============================================================================
+# INTERFAZ PRINCIPAL
+# ============================================================================
+
+# Título
+st.title("🔬 FilterLab")
+st.caption("Explorador de Filtros Espaciales y Morfológicos")
+
+# Layout de 3 columnas: Sidebar izq | Imagen centro | Cola derecha
+col_main, col_queue = st.columns([3, 1])
+
+# ============================================================================
+# SIDEBAR - CARGA DE IMAGEN Y SELECCIÓN DE FILTROS
+# ============================================================================
+
 with st.sidebar:
     st.header("📁 Cargar Imagen")
     uploaded_file = st.file_uploader(
         "Selecciona una imagen",
         type=['png', 'jpg', 'jpeg', 'bmp', 'tiff'],
-        help="Formatos soportados: PNG, JPG, BMP, TIFF"
+        help="Formatos soportados: PNG, JPG, JPEG, BMP, TIFF"
     )
     
-    st.markdown("---")
-    
-    # Botón para limpiar filtros
-    if st.button("🗑️ Limpiar todos los filtros", use_container_width=True):
-        st.session_state.filtros_activos = []
-        st.rerun()
-    
-    # Mostrar orden de filtros activos
-    if st.session_state.filtros_activos:
-        st.markdown("---")
-        st.subheader("📋 Orden de aplicación:")
-        for i, (fname, _) in enumerate(st.session_state.filtros_activos, 1):
-            all_filters = {**FILTROS_ESPACIALES, **FILTROS_MORFOLOGICOS}
-            nombre = all_filters.get(fname, {}).get("nombre", fname)
-            st.markdown(f"**{i}.** {nombre}")
-
-# Layout principal: dos columnas
-col_img, col_filters = st.columns([2, 1])
-
-# Columna de imagen
-with col_img:
-    if uploaded_file is not None:
-        # Cargar imagen
+    if uploaded_file:
         image = Image.open(uploaded_file)
         img_array = np.array(image)
         
         # Convertir a RGB si es necesario
         if len(img_array.shape) == 2:
-            # Escala de grises
-            original = img_array.copy()
+            img_rgb = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
         elif img_array.shape[2] == 4:
-            # RGBA -> RGB
-            original = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+            img_rgb = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
         else:
-            original = img_array.copy()
+            img_rgb = img_array
         
-        # Aplicar filtros en orden
-        resultado = original.copy()
-        for filter_name, params in st.session_state.filtros_activos:
-            resultado = apply_filter(resultado, filter_name, params)
+        st.success(f"✅ Imagen cargada: {img_rgb.shape[1]}x{img_rgb.shape[0]}")
+    
+    st.markdown("---")
+    
+    # ========================================================================
+    # FILTROS ESPACIALES
+    # ========================================================================
+    st.header("🎨 Filtros Espaciales")
+    
+    for key, info in FILTROS_ESPACIALES.items():
+        # Verificar si el filtro ya está activo
+        is_active = key in st.session_state.filtros_activos
+        
+        # Crear expander con indicador visual
+        icon = "✅" if is_active else "⚪"
+        with st.expander(f"{icon} {info['nombre']}", expanded=is_active):
+            st.caption(info['descripcion'])
+            
+            # Inicializar parámetros si no existen
+            if key not in st.session_state.filter_params:
+                st.session_state.filter_params[key] = {
+                    p: v['default'] for p, v in info['params'].items()
+                }
+            
+            # Mostrar sliders para los parámetros
+            current_params = {}
+            for param_name, param_config in info['params'].items():
+                if isinstance(param_config['default'], float):
+                    val = st.slider(
+                        param_config['label'],
+                        min_value=param_config['min'],
+                        max_value=param_config['max'],
+                        value=st.session_state.filter_params[key].get(param_name, param_config['default']),
+                        step=param_config['step'],
+                        key=f"{key}_{param_name}"
+                    )
+                else:
+                    val = st.slider(
+                        param_config['label'],
+                        min_value=param_config['min'],
+                        max_value=param_config['max'],
+                        value=st.session_state.filter_params[key].get(param_name, param_config['default']),
+                        step=param_config['step'],
+                        key=f"{key}_{param_name}"
+                    )
+                current_params[param_name] = val
+            
+            # Actualizar parámetros en session state (actualización en tiempo real)
+            st.session_state.filter_params[key] = current_params
+            
+            # Botón de añadir/quitar
+            if is_active:
+                if st.button(f"❌ Quitar {info['nombre']}", key=f"remove_{key}", use_container_width=True):
+                    st.session_state.filtros_activos.remove(key)
+                    st.rerun()
+            else:
+                if st.button(f"➕ Añadir {info['nombre']}", key=f"add_{key}", use_container_width=True):
+                    st.session_state.filtros_activos.append(key)
+                    st.rerun()
+    
+    st.markdown("---")
+    
+    # ========================================================================
+    # FILTROS MORFOLÓGICOS
+    # ========================================================================
+    st.header("🔷 Filtros Morfológicos")
+    
+    for key, info in FILTROS_MORFOLOGICOS.items():
+        is_active = key in st.session_state.filtros_activos
+        
+        icon = "✅" if is_active else "⚪"
+        with st.expander(f"{icon} {info['nombre']}", expanded=is_active):
+            st.caption(info['descripcion'])
+            
+            if key not in st.session_state.filter_params:
+                st.session_state.filter_params[key] = {
+                    p: v['default'] for p, v in info['params'].items()
+                }
+            
+            current_params = {}
+            for param_name, param_config in info['params'].items():
+                val = st.slider(
+                    param_config['label'],
+                    min_value=param_config['min'],
+                    max_value=param_config['max'],
+                    value=st.session_state.filter_params[key].get(param_name, param_config['default']),
+                    step=param_config['step'],
+                    key=f"{key}_{param_name}"
+                )
+                current_params[param_name] = val
+            
+            st.session_state.filter_params[key] = current_params
+            
+            if is_active:
+                if st.button(f"❌ Quitar {info['nombre']}", key=f"remove_{key}", use_container_width=True):
+                    st.session_state.filtros_activos.remove(key)
+                    st.rerun()
+            else:
+                if st.button(f"➕ Añadir {info['nombre']}", key=f"add_{key}", use_container_width=True):
+                    st.session_state.filtros_activos.append(key)
+                    st.rerun()
+
+# ============================================================================
+# COLUMNA PRINCIPAL - VISUALIZACIÓN DE IMAGEN
+# ============================================================================
+
+with col_main:
+    if uploaded_file:
+        # Preparar la lista de filtros con parámetros actuales
+        filter_chain = [
+            (f, st.session_state.filter_params.get(f, {})) 
+            for f in st.session_state.filtros_activos
+        ]
+        
+        # Aplicar filtros
+        if filter_chain:
+            result_img = apply_filter_chain(img_rgb, filter_chain)
+        else:
+            result_img = img_rgb
         
         # Mostrar imágenes lado a lado
-        subcol1, subcol2 = st.columns(2)
+        col_orig, col_result = st.columns(2)
         
-        with subcol1:
-            st.markdown("### 📷 Original")
-            st.image(original, use_container_width=True)
+        with col_orig:
+            st.subheader("Original")
+            st.image(img_rgb, use_container_width=True)
         
-        with subcol2:
-            st.markdown("### 🎨 Resultado")
-            st.image(resultado, use_container_width=True, clamp=True)
+        with col_result:
+            st.subheader("Resultado")
+            st.image(result_img, use_container_width=True, clamp=True)
         
         # Botón de descarga
         st.markdown("---")
         
-        # Convertir resultado para descarga
-        if len(resultado.shape) == 2:
-            result_pil = Image.fromarray(resultado)
+        # Convertir resultado a bytes para descarga
+        if len(result_img.shape) == 2:
+            result_pil = Image.fromarray(result_img)
         else:
-            result_pil = Image.fromarray(resultado)
+            result_pil = Image.fromarray(result_img)
         
         buf = io.BytesIO()
         result_pil.save(buf, format='PNG')
         
         st.download_button(
-            label="⬇️ Descargar imagen resultado",
+            label="📥 Descargar resultado",
             data=buf.getvalue(),
-            file_name="imagen_procesada.png",
+            file_name="filterlab_resultado.png",
             mime="image/png",
             use_container_width=True
         )
     else:
         st.info("👈 Carga una imagen desde el panel lateral para comenzar")
         
-        # Mostrar imagen de ejemplo
-        st.markdown("### 💡 Ejemplo de uso:")
+        # Placeholder visual
         st.markdown("""
-        1. Carga una imagen (rayos X, médica, industrial, etc.)
-        2. Activa los filtros en el panel derecho
-        3. Ajusta los parámetros según necesites
-        4. Los filtros se aplican en el orden que los activas
-        5. Descarga el resultado final
+        ### Cómo usar FilterLab:
+        
+        1. **Cargar imagen** - Usa el panel izquierdo para subir una imagen
+        2. **Añadir filtros** - Selecciona filtros y ajusta sus parámetros
+        3. **Ver resultado** - La imagen se actualiza en tiempo real
+        4. **Reordenar** - Usa la cola de la derecha para cambiar el orden
+        5. **Descargar** - Guarda el resultado cuando estés satisfecho
         """)
 
-# Columna de filtros
-with col_filters:
-    st.markdown("## 🎛️ Filtros")
-    
-    # Tabs para organizar filtros
-    tab_espacial, tab_morfologico = st.tabs(["🌊 Espaciales", "🔲 Morfológicos"])
-    
-    with tab_espacial:
-        st.markdown("### Filtros Espaciales")
-        
-        for key, info in FILTROS_ESPACIALES.items():
-            with st.expander(f"**{info['nombre']}**", expanded=False):
-                st.caption(info['descripcion'])
-                
-                # Parámetros específicos
-                params = {}
-                
-                if "kernel_size" in info['params']:
-                    params["kernel_size"] = st.slider(
-                        f"Tamaño kernel ({key})", 3, 31, 5, 2,
-                        key=f"{key}_kernel"
-                    )
-                
-                if "sigma" in info['params']:
-                    params["sigma"] = st.slider(
-                        f"Sigma ({key})", 0.1, 5.0, 1.0, 0.1,
-                        key=f"{key}_sigma"
-                    )
-                
-                if "clip_limit" in info['params']:
-                    params["clip_limit"] = st.slider(
-                        f"Clip Limit ({key})", 1.0, 10.0, 2.0, 0.5,
-                        key=f"{key}_clip"
-                    )
-                
-                if "tile_size" in info['params']:
-                    params["tile_size"] = st.slider(
-                        f"Tile Size ({key})", 2, 16, 8, 1,
-                        key=f"{key}_tile"
-                    )
-                
-                if "low_threshold" in info['params']:
-                    params["low_threshold"] = st.slider(
-                        f"Umbral bajo ({key})", 0, 200, 50, 5,
-                        key=f"{key}_low"
-                    )
-                
-                if "high_threshold" in info['params']:
-                    params["high_threshold"] = st.slider(
-                        f"Umbral alto ({key})", 50, 300, 150, 5,
-                        key=f"{key}_high"
-                    )
-                
-                # Botones para añadir/quitar
-                col_add, col_remove = st.columns(2)
-                
-                with col_add:
-                    if st.button(f"➕ Añadir", key=f"add_{key}", use_container_width=True):
-                        st.session_state.filtros_activos.append((key, params.copy()))
-                        st.rerun()
-                
-                with col_remove:
-                    # Buscar si este filtro está activo
-                    idx_to_remove = None
-                    for i, (fname, _) in enumerate(st.session_state.filtros_activos):
-                        if fname == key:
-                            idx_to_remove = i
-                            break
-                    
-                    if idx_to_remove is not None:
-                        if st.button(f"➖ Quitar", key=f"rem_{key}", use_container_width=True):
-                            st.session_state.filtros_activos.pop(idx_to_remove)
-                            st.rerun()
-    
-    with tab_morfologico:
-        st.markdown("### Filtros Morfológicos")
-        
-        for key, info in FILTROS_MORFOLOGICOS.items():
-            with st.expander(f"**{info['nombre']}**", expanded=False):
-                st.caption(info['descripcion'])
-                
-                # Parámetros específicos
-                params = {}
-                
-                if "kernel_size" in info['params']:
-                    default_k = 15 if key in ['tophat', 'blackhat'] else 5
-                    params["kernel_size"] = st.slider(
-                        f"Tamaño kernel ({key})", 3, 31, default_k, 2,
-                        key=f"{key}_kernel"
-                    )
-                
-                if "iterations" in info['params']:
-                    params["iterations"] = st.slider(
-                        f"Iteraciones ({key})", 1, 10, 1, 1,
-                        key=f"{key}_iter"
-                    )
-                
-                # Botones para añadir/quitar
-                col_add, col_remove = st.columns(2)
-                
-                with col_add:
-                    if st.button(f"➕ Añadir", key=f"add_{key}", use_container_width=True):
-                        st.session_state.filtros_activos.append((key, params.copy()))
-                        st.rerun()
-                
-                with col_remove:
-                    idx_to_remove = None
-                    for i, (fname, _) in enumerate(st.session_state.filtros_activos):
-                        if fname == key:
-                            idx_to_remove = i
-                            break
-                    
-                    if idx_to_remove is not None:
-                        if st.button(f"➖ Quitar", key=f"rem_{key}", use_container_width=True):
-                            st.session_state.filtros_activos.pop(idx_to_remove)
-                            st.rerun()
+# ============================================================================
+# COLUMNA DERECHA - COLA DE FILTROS
+# ============================================================================
 
-# Footer
+with col_queue:
+    st.subheader("📋 Cola de Filtros")
+    
+    if st.session_state.filtros_activos:
+        st.caption(f"{len(st.session_state.filtros_activos)} filtro(s) activo(s)")
+        
+        # Mostrar cada filtro en orden
+        for idx, filter_key in enumerate(st.session_state.filtros_activos):
+            info = get_filter_info(filter_key)
+            params = st.session_state.filter_params.get(filter_key, {})
+            
+            # Crear card para cada filtro
+            with st.container():
+                st.markdown(f"""
+                <div style="
+                    background-color: #1E1E1E;
+                    border-radius: 8px;
+                    padding: 10px;
+                    margin-bottom: 8px;
+                    border-left: 4px solid #4CAF50;
+                ">
+                    <div style="font-weight: bold; color: #4CAF50;">
+                        {idx + 1}. {info['nombre']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Mostrar parámetros actuales
+                if params:
+                    param_str = ", ".join([f"{k}={v}" for k, v in params.items()])
+                    st.caption(f"   └─ {param_str}")
+                
+                # Botones de reordenar
+                col_up, col_down, col_del = st.columns(3)
+                
+                with col_up:
+                    if idx > 0:
+                        if st.button("⬆️", key=f"up_{idx}", help="Subir"):
+                            # Intercambiar con el anterior
+                            st.session_state.filtros_activos[idx], st.session_state.filtros_activos[idx-1] = \
+                                st.session_state.filtros_activos[idx-1], st.session_state.filtros_activos[idx]
+                            st.rerun()
+                
+                with col_down:
+                    if idx < len(st.session_state.filtros_activos) - 1:
+                        if st.button("⬇️", key=f"down_{idx}", help="Bajar"):
+                            # Intercambiar con el siguiente
+                            st.session_state.filtros_activos[idx], st.session_state.filtros_activos[idx+1] = \
+                                st.session_state.filtros_activos[idx+1], st.session_state.filtros_activos[idx]
+                            st.rerun()
+                
+                with col_del:
+                    if st.button("🗑️", key=f"del_{idx}", help="Eliminar"):
+                        st.session_state.filtros_activos.pop(idx)
+                        st.rerun()
+        
+        st.markdown("---")
+        
+        # Botón para limpiar todo
+        if st.button("🗑️ Limpiar todo", use_container_width=True, type="secondary"):
+            st.session_state.filtros_activos = []
+            st.rerun()
+    
+    else:
+        st.info("No hay filtros activos")
+        st.caption("Añade filtros desde el panel izquierdo")
+
+# ============================================================================
+# FOOTER
+# ============================================================================
+
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: gray;'>
     <small>
-    Filtros Espaciales y Morfológicos | Visión Artificial - UNIR<br>
-    Basado en OpenCV | Trabajo Grupal 2025
+    FilterLab | Visión Artificial - UNIR 2025<br>
+    Basado en OpenCV
     </small>
 </div>
 """, unsafe_allow_html=True)
