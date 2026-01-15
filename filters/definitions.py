@@ -30,7 +30,7 @@ FILTROS_ESPACIALES = {
         "nombre": "Mediana",
         "descripcion": "Elimina ruido sal y pimienta preservando bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 31, "default": 5, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 31, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "bilateral": {
