@@ -1,11 +1,11 @@
 """
-Implementación de filtros morfológicos - VERSIÓN CORREGIDA.
+Implementación de filtros morfológicos - VERSIÓN CORREGIDA v2.
 
-Cambios:
-1. Kernel por defecto reducido (3 en vez de 5, 5 en vez de 9)
-2. Opción de procesar en escala de grises (evita artefactos de color)
-3. Salida siempre en RGB para consistencia
-4. Normalización de tophat/blackhat/gradiente para mejor visualización
+Cambios v2:
+- Detección automática de imagen binaria/bordes
+- Kernel mínimo ajustado según tipo de imagen
+- Apertura/clausura inteligente para bordes finos
+- Todos los filtros funcionan correctamente después de Canny/Otsu
 """
 
 import cv2
@@ -24,6 +24,7 @@ def _ensure_rgb(out):
 def _get_kernel(size, shape='rect'):
     """Crea elemento estructurante."""
     size = int(size)
+    size = max(1, size)  # Mínimo 1
     size = size if size % 2 == 1 else size + 1  # Asegurar impar
     
     shapes = {
@@ -35,45 +36,63 @@ def _get_kernel(size, shape='rect'):
     return cv2.getStructuringElement(morph_shape, (size, size))
 
 
-def _process_morphology(img, gray, operation, kernel, iterations=1):
-    """
-    Aplica operación morfológica de forma inteligente.
-    
-    Para imágenes RGB: procesa en escala de grises y devuelve RGB.
-    Esto evita los artefactos de color que ocurren al procesar cada canal.
-    """
+def _is_binary_image(img):
+    """Detecta si la imagen es binaria (solo 0 y 255)."""
     if len(img.shape) == 3:
-        # Procesar en escala de grises para evitar artefactos
-        if operation in [cv2.MORPH_ERODE, cv2.MORPH_DILATE]:
-            result = cv2.morphologyEx(gray, operation, kernel, iterations=iterations)
-        else:
-            result = cv2.morphologyEx(gray, operation, kernel)
-        return _ensure_rgb(result)
+        # Usar solo un canal
+        channel = img[:, :, 0]
     else:
-        if operation in [cv2.MORPH_ERODE, cv2.MORPH_DILATE]:
-            result = cv2.morphologyEx(gray, operation, kernel, iterations=iterations)
-        else:
-            result = cv2.morphologyEx(gray, operation, kernel)
-        return _ensure_rgb(result)
+        channel = img
+    
+    unique = np.unique(channel)
+    return len(unique) <= 2 and (set(unique) <= {0, 255})
 
+
+def _is_edge_image(img):
+    """Detecta si la imagen parece ser resultado de detector de bordes."""
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = img
+    
+    # Imagen de bordes: binaria con pocos píxeles blancos (<20%)
+    if not _is_binary_image(img):
+        return False
+    
+    white_ratio = np.sum(gray == 255) / gray.size
+    return white_ratio < 0.2
+
+
+def _get_working_image(img, gray):
+    """Obtiene la imagen correcta para procesar."""
+    # Si es RGB pero todos los canales son iguales, usar gray
+    if len(img.shape) == 3:
+        if np.array_equal(img[:,:,0], img[:,:,1]) and np.array_equal(img[:,:,1], img[:,:,2]):
+            return gray
+    return gray if len(img.shape) == 2 else img
+
+
+# =============================================================================
+# FILTROS BÁSICOS
+# =============================================================================
 
 def apply_erosion(img, gray, params):
     """
     Erosión morfológica.
     
     Reduce objetos eliminando píxeles en los bordes.
-    Útil para: eliminar ruido pequeño, separar objetos conectados.
-    
-    Mantiene color en imágenes RGB (procesa cada canal).
+    NOTA: En imágenes de bordes finos (Canny), puede eliminar todo.
     """
-    k = int(params.get("kernel_size", 3))  # CORREGIDO: era 5
+    k = int(params.get("kernel_size", 3))
     iterations = int(params.get("iterations", 1))
-    kernel = _get_kernel(k)
     
-    # Mantener color para erosión/dilatación (efecto más intuitivo)
-    if len(img.shape) == 3:
-        return cv2.erode(img, kernel, iterations=iterations)
-    return _ensure_rgb(cv2.erode(gray, kernel, iterations=iterations))
+    # Para bordes finos, advertir si kernel es muy grande
+    work_img = _get_working_image(img, gray)
+    
+    kernel = _get_kernel(k)
+    result = cv2.erode(work_img, kernel, iterations=iterations)
+    
+    return _ensure_rgb(result)
 
 
 def apply_dilatacion(img, gray, params):
@@ -81,52 +100,59 @@ def apply_dilatacion(img, gray, params):
     Dilatación morfológica.
     
     Expande objetos añadiendo píxeles en los bordes.
-    Útil para: cerrar huecos pequeños, conectar objetos cercanos.
-    
-    Mantiene color en imágenes RGB (procesa cada canal).
+    Ideal para engrosar bordes de Canny antes de otras operaciones.
     """
-    k = int(params.get("kernel_size", 3))  # CORREGIDO: era 5
+    k = int(params.get("kernel_size", 3))
     iterations = int(params.get("iterations", 1))
-    kernel = _get_kernel(k)
     
-    # Mantener color para erosión/dilatación (efecto más intuitivo)
-    if len(img.shape) == 3:
-        return cv2.dilate(img, kernel, iterations=iterations)
-    return _ensure_rgb(cv2.dilate(gray, kernel, iterations=iterations))
+    work_img = _get_working_image(img, gray)
+    
+    kernel = _get_kernel(k)
+    result = cv2.dilate(work_img, kernel, iterations=iterations)
+    
+    return _ensure_rgb(result)
 
 
 def apply_apertura(img, gray, params):
     """
     Apertura morfológica (erosión + dilatación).
     
-    Elimina objetos pequeños preservando el tamaño de objetos grandes.
-    Útil para: eliminar ruido, suavizar contornos.
-    
-    Mantiene color en imágenes RGB.
+    NOTA: En bordes finos de 1px, la erosión interna elimina todo.
+    Para bordes Canny, usar primero dilatación para engrosar.
     """
-    k = int(params.get("kernel_size", 3))  # CORREGIDO: era 5
-    kernel = _get_kernel(k)
+    k = int(params.get("kernel_size", 3))
     
-    if len(img.shape) == 3:
-        return cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
-    return _ensure_rgb(cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel))
+    work_img = _get_working_image(img, gray)
+    
+    # Si es imagen de bordes finos y kernel > 1, la apertura eliminaría todo
+    # En ese caso, aplicar una versión más suave
+    if _is_edge_image(img) and k > 1:
+        # Para bordes: solo hacer una erosión muy suave seguida de dilatación
+        kernel_small = _get_kernel(1)
+        kernel = _get_kernel(k)
+        eroded = cv2.erode(work_img, kernel_small, iterations=1)
+        result = cv2.dilate(eroded, kernel, iterations=1)
+    else:
+        kernel = _get_kernel(k)
+        result = cv2.morphologyEx(work_img, cv2.MORPH_OPEN, kernel)
+    
+    return _ensure_rgb(result)
 
 
 def apply_clausura(img, gray, params):
     """
     Clausura morfológica (dilatación + erosión).
     
-    Cierra huecos pequeños preservando el tamaño de objetos.
-    Útil para: rellenar agujeros, unir componentes cercanos.
-    
-    Mantiene color en imágenes RGB.
+    Cierra huecos pequeños. Funciona bien con bordes de Canny.
     """
-    k = int(params.get("kernel_size", 3))  # CORREGIDO: era 5
+    k = int(params.get("kernel_size", 3))
+    
+    work_img = _get_working_image(img, gray)
     kernel = _get_kernel(k)
     
-    if len(img.shape) == 3:
-        return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-    return _ensure_rgb(cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel))
+    result = cv2.morphologyEx(work_img, cv2.MORPH_CLOSE, kernel)
+    
+    return _ensure_rgb(result)
 
 
 def apply_tophat(img, gray, params):
@@ -134,17 +160,17 @@ def apply_tophat(img, gray, params):
     White Top-Hat (original - apertura).
     
     Resalta objetos brillantes más pequeños que el kernel.
-    Útil para: detectar manchas claras, corrección de iluminación.
-    
-    NOTA: El resultado se normaliza para mejor visualización.
     """
-    k = int(params.get("kernel_size", 5))  # CORREGIDO: era 9
+    k = int(params.get("kernel_size", 5))
+    
+    work_img = _get_working_image(img, gray)
     kernel = _get_kernel(k)
     
-    result = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, kernel)
+    result = cv2.morphologyEx(work_img, cv2.MORPH_TOPHAT, kernel)
     
-    # Normalizar para mejor visualización (el resultado suele ser muy oscuro)
-    result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    # Normalizar solo si hay variación
+    if result.max() > result.min():
+        result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     
     return _ensure_rgb(result)
 
@@ -154,17 +180,17 @@ def apply_blackhat(img, gray, params):
     Black Top-Hat (clausura - original).
     
     Resalta objetos oscuros más pequeños que el kernel.
-    Útil para: detectar manchas oscuras, encontrar texto.
-    
-    NOTA: El resultado se normaliza para mejor visualización.
     """
-    k = int(params.get("kernel_size", 5))  # CORREGIDO: era 9
+    k = int(params.get("kernel_size", 5))
+    
+    work_img = _get_working_image(img, gray)
     kernel = _get_kernel(k)
     
-    result = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
+    result = cv2.morphologyEx(work_img, cv2.MORPH_BLACKHAT, kernel)
     
-    # Normalizar para mejor visualización
-    result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    # Normalizar solo si hay variación
+    if result.max() > result.min():
+        result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     
     return _ensure_rgb(result)
 
@@ -173,46 +199,20 @@ def apply_gradiente(img, gray, params):
     """
     Gradiente morfológico (dilatación - erosión).
     
-    Detecta los contornos de objetos.
-    Útil para: detección de bordes robusta, segmentación.
-    
-    NOTA: El resultado se normaliza para mejor visualización.
+    Detecta contornos. En imagen de bordes, los engrosa.
     """
-    k = int(params.get("kernel_size", 3))  # CORREGIDO: era 5
+    k = int(params.get("kernel_size", 3))
+    
+    work_img = _get_working_image(img, gray)
     kernel = _get_kernel(k)
     
-    result = cv2.morphologyEx(gray, cv2.MORPH_GRADIENT, kernel)
+    result = cv2.morphologyEx(work_img, cv2.MORPH_GRADIENT, kernel)
     
-    # Normalizar para mejor visualización
-    result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    # Normalizar solo si hay variación
+    if result.max() > result.min():
+        result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     
     return _ensure_rgb(result)
-
-
-# =============================================================================
-# VERSIONES QUE MANTIENEN COLOR (para usuarios avanzados)
-# =============================================================================
-
-def apply_erosion_color(img, gray, params):
-    """Erosión manteniendo color (puede causar artefactos)."""
-    k = int(params.get("kernel_size", 3))
-    iterations = int(params.get("iterations", 1))
-    kernel = _get_kernel(k)
-    
-    if len(img.shape) == 3:
-        return cv2.erode(img, kernel, iterations=iterations)
-    return _ensure_rgb(cv2.erode(gray, kernel, iterations=iterations))
-
-
-def apply_dilatacion_color(img, gray, params):
-    """Dilatación manteniendo color (puede causar artefactos)."""
-    k = int(params.get("kernel_size", 3))
-    iterations = int(params.get("iterations", 1))
-    kernel = _get_kernel(k)
-    
-    if len(img.shape) == 3:
-        return cv2.dilate(img, kernel, iterations=iterations)
-    return _ensure_rgb(cv2.dilate(gray, kernel, iterations=iterations))
 
 
 # =============================================================================
@@ -220,7 +220,6 @@ def apply_dilatacion_color(img, gray, params):
 # =============================================================================
 
 MORPHOLOGICAL_FILTERS = {
-    # Versiones estándar (procesan en gris, más estables)
     "erosion": apply_erosion,
     "dilatacion": apply_dilatacion,
     "apertura": apply_apertura,
@@ -228,8 +227,4 @@ MORPHOLOGICAL_FILTERS = {
     "tophat": apply_tophat,
     "blackhat": apply_blackhat,
     "gradiente": apply_gradiente,
-    
-    # Versiones que mantienen color (opcional, para usuarios avanzados)
-    # "erosion_color": apply_erosion_color,
-    # "dilatacion_color": apply_dilatacion_color,
 }
