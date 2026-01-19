@@ -141,7 +141,7 @@ FILTROS_MORFOLOGICOS = {
         "nombre": "Erosión",
         "descripcion": "Reduce objetos eliminando píxeles en bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "kernel_size": {"min": 1, "max": 40, "default": 3, "step": 1, "label": "Tamaño kernel"},
             "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
@@ -149,7 +149,7 @@ FILTROS_MORFOLOGICOS = {
         "nombre": "Dilatación",
         "descripcion": "Expande objetos añadiendo píxeles en bordes.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "kernel_size": {"min": 1, "max": 40, "default": 3, "step": 1, "label": "Tamaño kernel"},
             "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
@@ -157,28 +157,28 @@ FILTROS_MORFOLOGICOS = {
         "nombre": "Apertura",
         "descripcion": "Erosión + Dilatación. Elimina ruido pequeño.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 40, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "clausura": {
         "nombre": "Clausura",
         "descripcion": "Dilatación + Erosión. Cierra huecos pequeños.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 40, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "tophat": {
         "nombre": "White Top-Hat",
         "descripcion": "Extrae brillos menores que el kernel. Normalizado.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 40, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "blackhat": {
         "nombre": "Black Top-Hat",
         "descripcion": "Extrae oscuros menores que el kernel. Normalizado.",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 5, "step": 1, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 40, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "gradiente": {
