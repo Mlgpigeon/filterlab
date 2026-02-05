@@ -315,7 +315,14 @@ def render_analysis_section(img_original, img_result):
         img_original: Imagen original (numpy array)
         img_result: Imagen procesada (numpy array)
     """
-    with st.expander("📊 Análisis y Gráficos", expanded=False):
+    # Mostrar info del frame si es GIF
+    frame_info = ""
+    if 'gif_frames' in st.session_state:
+        current_idx = st.session_state.get('current_frame_idx', 0)
+        year = 2000 + current_idx
+        frame_info = f" - Frame {current_idx + 1} (Año {year})"
+    
+    with st.expander(f"📊 Análisis y Gráficos{frame_info}", expanded=False):
         st.caption("Histogramas y estadísticas con descarga individual")
         
         # Tabs para organizar los gráficos
@@ -507,6 +514,14 @@ def render_download_button(img_result):
     """
     st.markdown("---")
     
+    # Generar nombre de archivo con info del frame si es GIF
+    if 'gif_frames' in st.session_state:
+        current_idx = st.session_state.get('current_frame_idx', 0)
+        year = 2000 + current_idx
+        filename = f"filterlab_frame_{current_idx + 1}_año_{year}.png"
+    else:
+        filename = "filterlab_resultado.png"
+    
     result_pil = Image.fromarray(img_result)
     buf = io.BytesIO()
     result_pil.save(buf, format='PNG')
@@ -514,7 +529,7 @@ def render_download_button(img_result):
     st.download_button(
         label="📥 Descargar resultado",
         data=buf.getvalue(),
-        file_name="filterlab_resultado.png",
+        file_name=filename,
         mime="image/png",
         use_container_width=True
     )
@@ -532,6 +547,16 @@ def render_placeholder():
     3. **Ver resultado** - La imagen se actualiza en tiempo real
     4. **Reordenar** - Usa la cola de la derecha para cambiar el orden
     5. **Descargar** - Guarda el resultado cuando estés satisfecho
+    
+    ---
+    
+    ### 🎬 Soporte para GIF animados:
+    
+    Cuando cargas un **GIF animado**, FilterLab:
+    - Extrae todos los frames automáticamente
+    - Muestra una **timeline interactiva** para navegar
+    - Aplica los filtros a cada frame por separado
+    - Permite ver histogramas de cada frame individual
     """)
 
 

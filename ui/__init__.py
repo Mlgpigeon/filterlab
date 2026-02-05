@@ -11,6 +11,14 @@ from .components import (
     render_footer,
     render_analysis_section,
 )
+from .timeline import (
+    render_frame_timeline,
+    render_frame_info,
+    render_mini_timeline_thumbnails,
+    is_gif_loaded,
+    get_current_frame,
+    get_all_frames,
+)
 
 __all__ = [
     "render_sidebar",
@@ -20,4 +28,11 @@ __all__ = [
     "render_filter_queue",
     "render_footer",
     "render_analysis_section",
+    # Timeline components
+    "render_frame_timeline",
+    "render_frame_info",
+    "render_mini_timeline_thumbnails",
+    "is_gif_loaded",
+    "get_current_frame",
+    "get_all_frames",
 ]

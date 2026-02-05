@@ -5,6 +5,7 @@ Orquesta la aplicación de filtros a imágenes.
 
 import cv2
 from filters import SPATIAL_FILTERS, MORPHOLOGICAL_FILTERS
+from filters.segmentation import SEGMENTATION_FILTERS
 
 
 def apply_filter(img, filter_name, params):
@@ -32,6 +33,8 @@ def apply_filter(img, filter_name, params):
         return SPATIAL_FILTERS[filter_name](result, gray, params)
     elif filter_name in MORPHOLOGICAL_FILTERS:
         return MORPHOLOGICAL_FILTERS[filter_name](result, gray, params)
+    elif filter_name in SEGMENTATION_FILTERS:
+        return SEGMENTATION_FILTERS[filter_name](result, gray, params)
     
     # Si no se encuentra el filtro, devolver imagen sin cambios
     return result

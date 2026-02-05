@@ -1,6 +1,6 @@
 """
 FilterLab - Explorador de Filtros de Imagen
-Versión modularizada con cola de filtros, sin duplicados y actualización en tiempo real
+Versión con soporte de timeline para GIFs animados
 
 Estructura:
     filterlab/
@@ -8,13 +8,17 @@ Estructura:
     ├── filters/            # Definiciones e implementaciones de filtros
     │   ├── definitions.py  # Configuración de filtros
     │   ├── spatial.py      # Filtros espaciales
-    │   └── morphological.py # Filtros morfológicos
+    │   ├── morphological.py # Filtros morfológicos
+    │   └── segmentation.py  # Filtros de segmentación
     ├── core/               # Lógica de procesamiento
     │   ├── processor.py    # Aplicación de filtros
-    │   └── utils.py        # Utilidades de imagen
+    │   ├── utils.py        # Utilidades de imagen
+    │   ├── analysis.py     # Análisis de área
+    │   └── batch.py        # Procesamiento batch
     └── ui/                 # Componentes de interfaz
         ├── sidebar.py      # Panel lateral
-        └── components.py   # Visualización y cola
+        ├── components.py   # Visualización y cola
+        └── timeline.py     # Timeline para GIFs
 """
 
 import streamlit as st
@@ -28,6 +32,9 @@ from ui import (
     render_filter_queue,
     render_footer,
     render_analysis_section,
+    render_frame_timeline,
+    render_frame_info,
+    is_gif_loaded,
 )
 
 # ============================================================================
@@ -78,26 +85,56 @@ with st.sidebar:
 
 with col_main:
     if img_rgb is not None:
+        # ================================================================
+        # TIMELINE PARA GIFS
+        # ================================================================
+        if is_gif_loaded():
+            # Mostrar timeline de navegación
+            current_frame_idx = render_frame_timeline(start_year=2000)
+            
+            # Mostrar información del frame
+            render_frame_info()
+            
+            st.markdown("---")
+        
+        # ================================================================
+        # PROCESAMIENTO DE IMAGEN
+        # ================================================================
+        
         # Preparar cadena de filtros
         filter_chain = [
             (f, st.session_state.filter_params.get(f, {}))
             for f in st.session_state.filtros_activos
         ]
         
-        # Aplicar filtros
+        # Aplicar filtros al frame actual
         if filter_chain:
             result_img = apply_filter_chain(img_rgb, filter_chain)
         else:
             result_img = img_rgb
         
-        # Mostrar imágenes
+        # ================================================================
+        # VISUALIZACIÓN
+        # ================================================================
+        
+        # Mostrar título con info del frame si es GIF
+        if is_gif_loaded():
+            current_idx = st.session_state.get('current_frame_idx', 0)
+            year = 2000 + current_idx
+            st.subheader(f"📅 Año {year} (Frame {current_idx + 1})")
+        
+        # Mostrar imágenes original y resultado
         render_image_viewer(img_rgb, result_img)
         
         # Botón de descarga
         render_download_button(result_img)
         
-        # Sección de análisis (histogramas y gráficos)
+        # ================================================================
+        # ANÁLISIS (HISTOGRAMAS Y ESTADÍSTICAS)
+        # ================================================================
+        
         render_analysis_section(img_rgb, result_img)
+        
     else:
         render_placeholder()
 
