@@ -181,6 +181,51 @@ def apply_convertir_lab(img, gray, params):
     colored = cv2.applyColorMap(result, cv2.COLORMAP_JET)
     return cv2.cvtColor(colored, cv2.COLOR_BGR2RGB)
 
+def apply_cloud_detection(img, gray, params):
+    """Detecta nubes combinando HSV y LAB."""
+    v_threshold = int(params.get("v_threshold", 200))
+    s_threshold = int(params.get("s_threshold", 50))
+    l_threshold = int(params.get("l_threshold", 200))
+    invert = params.get("invert", False)
+    
+    # HSV: nubes tienen V alto y S bajo
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    mask_hsv = (hsv[:, :, 2] > v_threshold) & (hsv[:, :, 1] < s_threshold)
+    
+    # LAB: nubes tienen L alto y a,b cercanos a 128
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    mask_lab = (lab[:, :, 0] > l_threshold) & \
+               (np.abs(lab[:, :, 1].astype(int) - 128) < 20) & \
+               (np.abs(lab[:, :, 2].astype(int) - 128) < 20)
+    
+    # Combinar máscaras
+    mask = (mask_hsv | mask_lab).astype(np.uint8) * 255
+    
+    # Operaciones morfológicas para limpiar
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    if invert:
+        mask = cv2.bitwise_not(mask)
+    
+    return _ensure_rgb(mask)
+
+
+def apply_overlay_mask(img, gray, params):
+    """Superpone la máscara binaria sobre la imagen original."""
+    alpha = float(params.get("alpha", 0.5))
+    color_r = int(params.get("color_r", 255))
+    color_g = int(params.get("color_g", 0))
+    color_b = int(params.get("color_b", 0))
+    
+    # Crear máscara de color
+    mask_colored = np.zeros_like(img)
+    binary_mask = gray > 127
+    mask_colored[binary_mask] = [color_r, color_g, color_b]
+    
+    # Blend
+    result = cv2.addWeighted(img, 1 - alpha, mask_colored, alpha, 0)
+    return result
 
 SEGMENTATION_FILTERS = {
     "umbral_manual": apply_umbral_manual,
@@ -195,4 +240,6 @@ SEGMENTATION_FILTERS = {
     "segmentacion_lab_suelo": apply_segmentacion_lab_suelo,
     "convertir_hsv": apply_convertir_hsv,
     "convertir_lab": apply_convertir_lab,
+    "cloud_detection": apply_cloud_detection,
+    "overlay_mask": apply_overlay_mask,
 }

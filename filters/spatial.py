@@ -172,6 +172,53 @@ def apply_sobel_y(img, gray, params):
     result = cv2.normalize(sy, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return _apply_colormap(result)
 
+def apply_equalize_hist(img, gray, params):
+    """Ecualización global del histograma."""
+    if len(img.shape) == 3:
+        # Ecualizar cada canal
+        result = np.zeros_like(img)
+        for i in range(3):
+            result[:, :, i] = cv2.equalizeHist(img[:, :, i])
+        return result
+    else:
+        result = cv2.equalizeHist(gray)
+        return _ensure_rgb(result)
+
+
+def apply_skeleton(img, gray, params):
+    """Esqueletización - reduce estructuras a líneas de 1 pixel."""
+    from skimage.morphology import skeletonize
+    # Binarizar primero
+    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    binary_bool = binary > 0
+    skeleton = skeletonize(binary_bool)
+    result = (skeleton * 255).astype(np.uint8)
+    return _ensure_rgb(result)
+
+
+def apply_hough_lines(img, gray, params):
+    """Detecta líneas rectas usando transformada de Hough."""
+    threshold = int(params.get("threshold", 50))
+    min_line_length = int(params.get("min_line_length", 50))
+    max_line_gap = int(params.get("max_line_gap", 10))
+    
+    # Detectar bordes primero
+    edges = cv2.Canny(gray, 50, 150)
+    
+    # Detectar líneas
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold, 
+                            minLineLength=min_line_length, 
+                            maxLineGap=max_line_gap)
+    
+    # Dibujar líneas en imagen negra
+    result = np.zeros_like(gray)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(result, (x1, y1), (x2, y2), 255, 2)
+    
+    return _ensure_rgb(result)
+
 
 SPATIAL_FILTERS = {
     "gaussiano": apply_gaussiano,
@@ -189,4 +236,7 @@ SPATIAL_FILTERS = {
     "sobel": apply_sobel,
     "sobel_x": apply_sobel_x,
     "sobel_y": apply_sobel_y,
+    "equalize_hist": apply_equalize_hist,
+    "skeleton": apply_skeleton,
+    "hough_lines": apply_hough_lines,
 }

@@ -119,7 +119,29 @@ FILTROS_ESPACIALES = {
         "params": {
             "kernel_size": {"min": 1, "max": 31, "default": 3, "step": 2, "label": "Tamaño kernel"}
         }
-    }
+    },
+    "equalize_hist": {
+        "nombre": "Ecualización Histograma",
+        "descripcion": "Ecualización global. Mejora contraste distribuyendo intensidades.",
+        "categoria": "contraste",
+        "params": {}
+    },
+    "skeleton": {
+        "nombre": "Esqueletización",
+        "descripcion": "Reduce estructuras binarias a líneas de 1 píxel.",
+        "categoria": "bordes",
+        "params": {}
+    },
+    "hough_lines": {
+        "nombre": "Detección de Líneas (Hough)",
+        "descripcion": "Detecta carreteras y estructuras lineales.",
+        "categoria": "bordes",
+        "params": {
+            "threshold": {"min": 10, "max": 200, "default": 50, "step": 10, "label": "Umbral votos"},
+            "min_line_length": {"min": 10, "max": 200, "default": 50, "step": 10, "label": "Longitud mínima"},
+            "max_line_gap": {"min": 1, "max": 50, "default": 10, "step": 5, "label": "Gap máximo"}
+        }
+    },
 }
 
 FILTROS_MORFOLOGICOS = {
@@ -307,7 +329,30 @@ FILTROS_SEGMENTACION = {
         "params": {
             "canal": {"options": ["L", "a", "b", "Todos"], "default": "a", "label": "Canal"}
         }
-    }
+    },
+    "cloud_detection": {
+        "nombre": "☁️ Detección de Nubes",
+        "descripcion": "Detecta nubes usando HSV+LAB. Ideal para preprocesar imágenes satelitales.",
+        "categoria": "segmentacion_color",
+        "params": {
+            "v_threshold": {"min": 150, "max": 255, "default": 200, "step": 5, "label": "Umbral V (brillo)"},
+            "s_threshold": {"min": 10, "max": 100, "default": 50, "step": 5, "label": "Umbral S máx"},
+            "l_threshold": {"min": 150, "max": 255, "default": 200, "step": 5, "label": "Umbral L (luminosidad)"},
+            "invert": {"default": False, "label": "Invertir (mostrar NO nubes)"}
+        }
+    },
+    "overlay_mask": {
+        "nombre": "🎭 Superponer Máscara",
+        "descripcion": "Superpone la imagen binaria actual sobre la original con color.",
+        "categoria": "visualizacion",
+        "params": {
+            "alpha": {"min": 0.1, "max": 1.0, "default": 0.5, "step": 0.1, "label": "Opacidad"},
+            "color_r": {"min": 0, "max": 255, "default": 255, "step": 10, "label": "Rojo"},
+            "color_g": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Verde"},
+            "color_b": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Azul"}
+        }
+    },
+
 }
 
 
