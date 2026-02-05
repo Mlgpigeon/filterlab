@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from filters import FILTROS_ESPACIALES, FILTROS_MORFOLOGICOS
+from filters import FILTROS_ESPACIALES, FILTROS_MORFOLOGICOS, FILTROS_SEGMENTACION
 
 
 def render_image_loader():
@@ -20,12 +20,20 @@ def render_image_loader():
     st.header("📁 Cargar Imagen")
     uploaded_file = st.file_uploader(
         "Selecciona una imagen",
-        type=['png', 'jpg', 'jpeg', 'bmp', 'tiff'],
-        help="Formatos soportados: PNG, JPG, JPEG, BMP, TIFF"
+        type=['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'gif'],
+        help="Formatos soportados: PNG, JPG, JPEG, BMP, TIFF, GIF"
     )
     
     if uploaded_file:
         image = Image.open(uploaded_file)
+        
+        # Si es GIF, tomar solo el primer frame
+        if hasattr(image, 'n_frames') and image.n_frames > 1:
+            image.seek(0)
+            st.info(f"🎞️ GIF detectado con {image.n_frames} frames. Usando el primer frame.")
+        
+        # Convertir a RGB
+        image = image.convert('RGB')
         img_array = np.array(image)
         
         # Convertir a RGB si es necesario
@@ -36,11 +44,9 @@ def render_image_loader():
         else:
             img_rgb = img_array
         
-        st.success(f"✅ Imagen cargada: {img_rgb.shape[1]}x{img_rgb.shape[0]}")
         return img_rgb
     
     return None
-
 
 def render_filter_controls(filter_dict, section_title, section_icon):
     """
@@ -66,20 +72,48 @@ def render_filter_controls(filter_dict, section_title, section_icon):
                     p: v['default'] for p, v in info['params'].items()
                 }
             
-            # Mostrar sliders para los parámetros
+            # Mostrar controles para los parámetros
             current_params = {}
             for param_name, param_config in info['params'].items():
-                val = st.slider(
-                    param_config['label'],
-                    min_value=param_config['min'],
-                    max_value=param_config['max'],
-                    value=st.session_state.filter_params[key].get(
-                        param_name, param_config['default']
-                    ),
-                    step=param_config['step'],
-                    key=f"{key}_{param_name}"
-                )
-                current_params[param_name] = val
+                
+                # Tipo 1: Slider (tiene min/max/step)
+                if 'min' in param_config and 'max' in param_config:
+                    val = st.slider(
+                        param_config['label'],
+                        min_value=param_config['min'],
+                        max_value=param_config['max'],
+                        value=st.session_state.filter_params[key].get(
+                            param_name, param_config['default']
+                        ),
+                        step=param_config.get('step', 1),
+                        key=f"{key}_{param_name}"
+                    )
+                    current_params[param_name] = val
+                
+                # Tipo 2: Selector (tiene options)
+                elif 'options' in param_config:
+                    val = st.selectbox(
+                        param_config['label'],
+                        options=param_config['options'],
+                        index=param_config['options'].index(
+                            st.session_state.filter_params[key].get(
+                                param_name, param_config['default']
+                            )
+                        ),
+                        key=f"{key}_{param_name}"
+                    )
+                    current_params[param_name] = val
+                
+                # Tipo 3: Checkbox (default es booleano)
+                elif isinstance(param_config.get('default'), bool):
+                    val = st.checkbox(
+                        param_config['label'],
+                        value=st.session_state.filter_params[key].get(
+                            param_name, param_config['default']
+                        ),
+                        key=f"{key}_{param_name}"
+                    )
+                    current_params[param_name] = val
             
             # Actualizar parámetros en session state
             st.session_state.filter_params[key] = current_params
@@ -102,7 +136,6 @@ def render_filter_controls(filter_dict, section_title, section_icon):
                     st.session_state.filtros_activos.append(key)
                     st.rerun()
 
-
 def render_sidebar():
     """
     Renderiza el sidebar completo.
@@ -121,5 +154,10 @@ def render_sidebar():
     
     # Filtros Morfológicos
     render_filter_controls(FILTROS_MORFOLOGICOS, "Filtros Morfológicos", "🔷")
+    
+    st.markdown("---")
+    
+    # Filtros de Segmentación
+    render_filter_controls(FILTROS_SEGMENTACION, "Segmentación", "✂️")
     
     return img_rgb

@@ -6,6 +6,7 @@ from .segmentation import SEGMENTATION_FILTERS
 from .definitions import (
     FILTROS_ESPACIALES,
     FILTROS_MORFOLOGICOS,
+    FILTROS_SEGMENTACION,
     get_all_filters,
     get_filter_info,
     get_filters_by_category,
