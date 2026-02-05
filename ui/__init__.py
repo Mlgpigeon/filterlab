@@ -1,7 +1,7 @@
 """
 Paquete UI - componentes de interfaz Streamlit.
 """
-
+from .temporal_analysis import render_temporal_analysis_section
 from .sidebar import render_sidebar
 from .components import (
     render_image_viewer,
@@ -35,4 +35,5 @@ __all__ = [
     "is_gif_loaded",
     "get_current_frame",
     "get_all_frames",
+    "render_temporal_analysis_section",
 ]

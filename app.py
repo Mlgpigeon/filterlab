@@ -35,6 +35,7 @@ from ui import (
     render_frame_timeline,
     render_frame_info,
     is_gif_loaded,
+    render_temporal_analysis_section,
 )
 
 # ============================================================================
@@ -135,6 +136,9 @@ with col_main:
         
         render_analysis_section(img_rgb, result_img)
         render_area_analysis_section(result_img)
+        # Análisis temporal (solo si hay GIF)
+        if is_gif_loaded():
+            render_temporal_analysis_section()
         
     else:
         render_placeholder()
