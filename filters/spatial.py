@@ -219,6 +219,31 @@ def apply_hough_lines(img, gray, params):
     
     return _ensure_rgb(result)
 
+def apply_rotate(img, gray, params):
+    """Rota la imagen."""
+    angle = float(params.get("angle", 0))
+    h, w = img.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    result = cv2.warpAffine(img, M, (w, h))
+    return result
+
+
+def apply_crop(img, gray, params):
+    """Recorta la imagen."""
+    top = int(params.get("top", 0))
+    bottom = int(params.get("bottom", 0))
+    left = int(params.get("left", 0))
+    right = int(params.get("right", 0))
+    
+    h, w = img.shape[:2]
+    y1 = max(0, top)
+    y2 = h - bottom if bottom > 0 else h
+    x1 = max(0, left)
+    x2 = w - right if right > 0 else w
+    
+    result = img[y1:y2, x1:x2]
+    return _ensure_rgb(result)
 
 SPATIAL_FILTERS = {
     "gaussiano": apply_gaussiano,
@@ -239,4 +264,6 @@ SPATIAL_FILTERS = {
     "equalize_hist": apply_equalize_hist,
     "skeleton": apply_skeleton,
     "hough_lines": apply_hough_lines,
+    "rotate": apply_rotate,
+    "crop": apply_crop,
 }

@@ -22,7 +22,7 @@ Estructura:
 """
 
 import streamlit as st
-
+from ui.components import render_area_analysis_section
 from core import apply_filter_chain, load_image
 from ui import (
     render_sidebar,
@@ -134,6 +134,7 @@ with col_main:
         # ================================================================
         
         render_analysis_section(img_rgb, result_img)
+        render_area_analysis_section(result_img)
         
     else:
         render_placeholder()

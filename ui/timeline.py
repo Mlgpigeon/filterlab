@@ -8,12 +8,6 @@ import streamlit as st
 def render_frame_timeline(start_year: int = 2000):
     """
     Renderiza la timeline de navegación para archivos animados (GIF/WEBP).
-    
-    Args:
-        start_year: Año inicial para mostrar en la timeline (por defecto 2000)
-    
-    Returns:
-        int: Índice del frame actual
     """
     if 'gif_frames' not in st.session_state or 'gif_n_frames' not in st.session_state:
         return None
@@ -21,59 +15,65 @@ def render_frame_timeline(start_year: int = 2000):
     n_frames = st.session_state.gif_n_frames
     current_idx = st.session_state.get('current_frame_idx', 0)
     
-    # Contenedor principal de la timeline
+    # Asegurar que el índice está en rango válido
+    if current_idx >= n_frames:
+        current_idx = n_frames - 1
+        st.session_state.current_frame_idx = current_idx
+    
     st.markdown("---")
     st.markdown("### 🎬 Timeline de Frames")
     
-    # Información del frame actual
     current_year = start_year + current_idx
     st.markdown(f"**Frame {current_idx + 1} de {n_frames}** | Año: **{current_year}**")
     
-    # Controles de navegación: << < slider > >>
+    # Controles de navegación
     col_first, col_prev, col_slider, col_next, col_last = st.columns([1, 1, 6, 1, 1])
     
+    # Variable para detectar cambios
+    new_idx = current_idx
+    
     with col_first:
-        if st.button("⏮️", key="btn_first", help="Ir al primer frame", use_container_width=True):
-            st.session_state.current_frame_idx = 0
-            st.rerun()
+        if st.button("⏮️", key="btn_first", help="Ir al primer frame", 
+                     use_container_width=True, disabled=(current_idx == 0)):
+            new_idx = 0
     
     with col_prev:
-        if st.button("◀️", key="btn_prev", help="Frame anterior", use_container_width=True):
-            if current_idx > 0:
-                st.session_state.current_frame_idx = current_idx - 1
-                st.rerun()
+        if st.button("◀️", key="btn_prev", help="Frame anterior", 
+                     use_container_width=True, disabled=(current_idx == 0)):
+            new_idx = current_idx - 1
     
     with col_slider:
-        # Slider principal para navegar
-        new_idx = st.slider(
+        slider_idx = st.slider(
             "Frame",
             min_value=0,
             max_value=n_frames - 1,
             value=current_idx,
-            format=f"Frame %d ({start_year} + frame)",
+            format=f"Frame %d (Año {start_year} + idx)",
             key="frame_slider",
             label_visibility="collapsed"
         )
-        if new_idx != current_idx:
-            st.session_state.current_frame_idx = new_idx
-            st.rerun()
+        if slider_idx != current_idx:
+            new_idx = slider_idx
     
     with col_next:
-        if st.button("▶️", key="btn_next", help="Frame siguiente", use_container_width=True):
-            if current_idx < n_frames - 1:
-                st.session_state.current_frame_idx = current_idx + 1
-                st.rerun()
+        if st.button("▶️", key="btn_next", help="Frame siguiente", 
+                     use_container_width=True, disabled=(current_idx >= n_frames - 1)):
+            new_idx = current_idx + 1
     
     with col_last:
-        if st.button("⏭️", key="btn_last", help="Ir al último frame", use_container_width=True):
-            st.session_state.current_frame_idx = n_frames - 1
-            st.rerun()
+        if st.button("⏭️", key="btn_last", help="Ir al último frame", 
+                     use_container_width=True, disabled=(current_idx >= n_frames - 1)):
+            new_idx = n_frames - 1
     
-    # Mostrar barra de progreso visual con años
+    # Aplicar cambio si hubo
+    if new_idx != current_idx:
+        st.session_state.current_frame_idx = new_idx
+        st.rerun()
+    
+    # Mostrar barra de años
     _render_year_bar(n_frames, current_idx, start_year)
     
     return current_idx
-
 
 def _render_year_bar(n_frames: int, current_idx: int, start_year: int):
     """

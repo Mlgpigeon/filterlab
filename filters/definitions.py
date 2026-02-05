@@ -142,6 +142,25 @@ FILTROS_ESPACIALES = {
             "max_line_gap": {"min": 1, "max": 50, "default": 10, "step": 5, "label": "Gap máximo"}
         }
     },
+        "rotate": {
+        "nombre": "🔄 Rotar Imagen",
+        "descripcion": "Rota la imagen en grados.",
+        "categoria": "transformacion",
+        "params": {
+            "angle": {"min": -180, "max": 180, "default": 0, "step": 1, "label": "Ángulo (grados)"}
+        }
+    },
+    "crop": {
+        "nombre": "✂️ Recortar Imagen",
+        "descripcion": "Recorta píxeles de los bordes (útil para eliminar texto/escala).",
+        "categoria": "transformacion",
+        "params": {
+            "top": {"min": 0, "max": 200, "default": 0, "step": 5, "label": "Recortar arriba (px)"},
+            "bottom": {"min": 0, "max": 200, "default": 0, "step": 5, "label": "Recortar abajo (px)"},
+            "left": {"min": 0, "max": 200, "default": 0, "step": 5, "label": "Recortar izquierda (px)"},
+            "right": {"min": 0, "max": 200, "default": 0, "step": 5, "label": "Recortar derecha (px)"}
+        }
+    },
 }
 
 FILTROS_MORFOLOGICOS = {
@@ -386,5 +405,6 @@ CATEGORIAS = {
     "morfologico": {"nombre": "🔷 Morfológicos", "descripcion": "Operaciones de forma"},
     "segmentacion": {"nombre": "✂️ Segmentación", "descripcion": "Binarización y umbralización"},
     "segmentacion_color": {"nombre": "🎨 Seg. por Color", "descripcion": "HSV y Lab"},
-    "visualizacion": {"nombre": "👁️ Visualización", "descripcion": "Ver espacios de color"}
+    "visualizacion": {"nombre": "👁️ Visualización", "descripcion": "Ver espacios de color"},
+    "transformacion": {"nombre": "🔧 Transformación", "descripcion": "Recorte y rotación"},
 }

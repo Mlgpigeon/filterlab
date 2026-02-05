@@ -621,6 +621,45 @@ def render_filter_queue():
         st.info("No hay filtros activos")
         st.caption("Añade filtros desde el panel izquierdo")
 
+def render_area_analysis_section(img_result):
+    """
+    Renderiza la sección de cálculo de área deforestada.
+    Solo funciona con imágenes binarias (segmentadas).
+    """
+    from core.analysis import AnalisisArea
+    
+    with st.expander("📐 Cálculo de Área", expanded=False):
+        st.caption("Calcula el área de píxeles blancos/negros en km² (escala Jamanxim: 51px = 20km)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            pixels_escala = st.number_input("Píxeles en escala", value=51, min_value=1)
+        with col2:
+            km_escala = st.number_input("Kilómetros en escala", value=20.0, min_value=0.1)
+        
+        contar_blancos = st.checkbox("Contar píxeles blancos (área deforestada)", value=True)
+        
+        if st.button("📊 Calcular Área", use_container_width=True):
+            analizador = AnalisisArea.desde_escala(pixels_escala, km_escala)
+            resultado = analizador.calcular_area(img_result, contar_blancos)
+            
+            st.markdown("### Resultados")
+            col_a, col_b, col_c = st.columns(3)
+            
+            with col_a:
+                st.metric("Área (km²)", f"{resultado.area_km2:.2f}")
+            with col_b:
+                st.metric("Área (ha)", f"{resultado.area_ha:.2f}")
+            with col_c:
+                st.metric("Porcentaje", f"{resultado.porcentaje_blanco if contar_blancos else resultado.porcentaje_negro:.2f}%")
+            
+            st.markdown(f"""
+            **Detalles:**
+            - Píxeles contados: {resultado.pixels_blancos if contar_blancos else resultado.pixels_negros:,}
+            - Píxeles totales: {resultado.pixels_totales:,}
+            - Escala: {resultado.escala_info}
+            """)
 
 def _swap_filters(idx1, idx2):
     """Intercambia dos filtros en la cola."""
