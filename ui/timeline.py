@@ -8,7 +8,7 @@ def _go_to_frame(idx: int):
     """Callback para cambiar de frame."""
     st.session_state.current_frame_idx = idx
 
-def render_frame_timeline(start_year: int = 2000):
+def render_frame_timeline():  # REMOVE start_year parameter
     """
     Renderiza la timeline de navegación para archivos animados (GIF/WEBP).
     """
@@ -17,21 +17,18 @@ def render_frame_timeline(start_year: int = 2000):
     
     n_frames = st.session_state.gif_n_frames
     
-    # IMPORTANTE: Leer directamente de session_state, NO hacer una copia local
     if 'current_frame_idx' not in st.session_state:
         st.session_state.current_frame_idx = 0
     
-    # Asegurar que el índice está en rango válido
     if st.session_state.current_frame_idx >= n_frames:
         st.session_state.current_frame_idx = n_frames - 1
     
-    current_idx = st.session_state.current_frame_idx  # Solo para mostrar info
+    current_idx = st.session_state.current_frame_idx
     
     st.markdown("---")
     st.markdown("### 🎬 Timeline de Frames")
     
-    current_year = start_year + st.session_state.current_frame_idx
-    st.markdown(f"**Frame {st.session_state.current_frame_idx + 1} de {n_frames}** | Año: **{current_year}**")
+    st.markdown(f"**Frame {current_idx + 1} de {n_frames}**") 
     
     # Controles de navegación
     col_first, col_prev, col_slider, col_next, col_last = st.columns([1, 1, 6, 1, 1])
@@ -57,17 +54,15 @@ def render_frame_timeline(start_year: int = 2000):
         )
     
     with col_slider:
-        # CLAVE: El slider debe leer Y escribir directamente en session_state
-        st.slider(
+        new_idx = st.slider(
             "Frame",
             min_value=0,
             max_value=n_frames - 1,
-            value=st.session_state.current_frame_idx,  # Lee el valor actual
             format=f"Frame %d",
-            key="frame_slider_control",  # Nombre diferente para evitar conflictos
-            label_visibility="collapsed",
-            on_change=lambda: setattr(st.session_state, 'current_frame_idx', st.session_state.frame_slider_control)
+            key="current_frame_idx",  
+            label_visibility="collapsed"
         )
+        # No necesitas on_change, el slider actualiza directamente current_frame_idx
     
     with col_next:
         st.button(
@@ -90,15 +85,12 @@ def render_frame_timeline(start_year: int = 2000):
         )
     
     # Mostrar barra de años
-    _render_year_bar(n_frames, st.session_state.current_frame_idx, start_year)
+    _render_frame_bar(n_frames, st.session_state.current_frame_idx)
     
     return st.session_state.current_frame_idx
 
-def _render_year_bar(n_frames: int, current_idx: int, start_year: int):
-    """
-    Renderiza una barra visual con los años y el frame actual destacado.
-    """
-    # Determinar cuántos años mostrar (max 10 para no saturar)
+def _render_frame_bar(n_frames: int, current_idx: int): 
+    """Renderiza una barra visual con los frames."""
     if n_frames <= 10:
         step = 1
     elif n_frames <= 20:
@@ -106,26 +98,20 @@ def _render_year_bar(n_frames: int, current_idx: int, start_year: int):
     else:
         step = max(1, n_frames // 10)
     
-    # Crear marcadores de años
-    years_display = []
+    frames_display = []
     for i in range(0, n_frames, step):
-        year = start_year + i
         if i == current_idx:
-            years_display.append(f"**[{year}]**")
+            frames_display.append(f"**[{i+1}]**")  # Show frame number, not year
         else:
-            years_display.append(str(year))
+            frames_display.append(str(i+1))
     
-    # Añadir el último año si no está incluido
     if (n_frames - 1) % step != 0:
-        last_year = start_year + n_frames - 1
         if current_idx == n_frames - 1:
-            years_display.append(f"**[{last_year}]**")
+            frames_display.append(f"**[{n_frames}]**")
         else:
-            years_display.append(str(last_year))
+            frames_display.append(str(n_frames))
     
-    # Mostrar la barra de años
-    st.caption(" · ".join(years_display))
-
+    st.caption(" · ".join(frames_display))
 
 def render_frame_info():
     """
@@ -191,9 +177,9 @@ def render_mini_timeline_thumbnails(max_thumbnails: int = 10):
             thumbnail = cv2.resize(frame, (60, 60))
             
             if st.button(
-                f"{2000 + idx}",
+                f"#{idx+1}",  # CHANGE from year to frame number
                 key=f"thumb_{idx}",
-                help=f"Ir a frame {idx + 1} (año {2000 + idx})",
+                help=f"Ir a frame {idx + 1}",  # REMOVE year reference
                 use_container_width=True
             ):
                 st.session_state.current_frame_idx = idx

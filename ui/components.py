@@ -318,8 +318,7 @@ def render_analysis_section(img_original, img_result):
     frame_info = ""
     if 'gif_frames' in st.session_state:
         current_idx = st.session_state.get('current_frame_idx', 0)
-        year = 2000 + current_idx
-        frame_info = f" - Frame {current_idx + 1} (Año {year})"
+        frame_info = f" - Frame {current_idx + 1}"
     
     with st.expander(f"📊 Análisis y Gráficos{frame_info}", expanded=False):
         st.caption("Histogramas y estadísticas con descarga individual")
@@ -512,8 +511,7 @@ def render_download_button(img_result):
     # Generar nombre de archivo con info del frame si es GIF
     if 'gif_frames' in st.session_state:
         current_idx = st.session_state.get('current_frame_idx', 0)
-        year = 2000 + current_idx
-        filename = f"filterlab_frame_{current_idx + 1}_año_{year}.png"
+        filename = f"filterlab_frame_{current_idx + 1}.png"
     else:
         filename = "filterlab_resultado.png"
     

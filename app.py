@@ -92,7 +92,7 @@ with col_main:
         # ================================================================
         if is_gif_loaded():
             # Mostrar timeline de navegación
-            current_frame_idx = render_frame_timeline(start_year=2000)
+            current_frame_idx = render_frame_timeline()
             
             # Mostrar información del frame
             render_frame_info()
@@ -124,8 +124,7 @@ with col_main:
         # Mostrar título con info del frame si es GIF
         if is_gif_loaded():
             current_idx = st.session_state.get('current_frame_idx', 0)
-            year = 2000 + current_idx
-            st.subheader(f"📅 Año {year} (Frame {current_idx + 1})")
+            st.subheader(f"🎬 Frame {current_idx + 1}")
         
         # Mostrar imágenes original y resultado
         render_image_viewer(img_rgb, result_img)
