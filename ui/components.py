@@ -300,20 +300,19 @@ def _create_stats_figure(img_orig, img_result):
 def _fig_to_bytes(fig, format='png'):
     """Convierte figura matplotlib a bytes."""
     buf = io.BytesIO()
-    fig.savefig(buf, format=format, facecolor=fig.get_facecolor(), 
-                edgecolor='none', bbox_inches='tight', dpi=150)
-    buf.seek(0)
-    plt.close(fig)
-    return buf.getvalue()
-
+    try:
+        fig.savefig(buf, format=format, facecolor=fig.get_facecolor(), 
+                    edgecolor='none', bbox_inches='tight', dpi=150)
+        buf.seek(0)
+        bytes_data = buf.getvalue()
+    finally:
+        plt.close(fig)  # IMPORTANTE: cerrar después de guardar
+        buf.close()
+    return bytes_data
 
 def render_analysis_section(img_original, img_result):
     """
     Renderiza la sección desplegable con histogramas y gráficos.
-    
-    Args:
-        img_original: Imagen original (numpy array)
-        img_result: Imagen procesada (numpy array)
     """
     # Mostrar info del frame si es GIF
     frame_info = ""
@@ -334,36 +333,39 @@ def render_analysis_section(img_original, img_result):
             "📋 Estadísticas"
         ])
         
+        # Generar clave única para widgets interactivos
+        widget_key = f"widget_{st.session_state.get('current_frame_idx', 0)}"
+        
         # Tab 1: Histogramas RGB
         with tab1:
             col1, col2 = st.columns(2)
             
             with col1:
                 fig_orig_rgb = _create_histogram_figure(img_original, "Original - RGB", show_rgb=True)
-                st.pyplot(fig_orig_rgb)
+                st.pyplot(fig_orig_rgb, clear_figure=True)
                 st.download_button(
                     "📥 Descargar",
                     data=_fig_to_bytes(fig_orig_rgb),
                     file_name="histograma_original_rgb.png",
                     mime="image/png",
-                    key="dl_orig_rgb"
+                    key=f"dl_orig_rgb_{widget_key}"
                 )
             
             with col2:
                 fig_result_rgb = _create_histogram_figure(img_result, "Resultado - RGB", show_rgb=True)
-                st.pyplot(fig_result_rgb)
+                st.pyplot(fig_result_rgb, clear_figure=True)
                 st.download_button(
                     "📥 Descargar",
                     data=_fig_to_bytes(fig_result_rgb),
                     file_name="histograma_resultado_rgb.png",
                     mime="image/png",
-                    key="dl_result_rgb"
+                    key=f"dl_result_rgb_{widget_key}"
                 )
         
         # Tab 2: Escala de grises comparativo
         with tab2:
             fig_gray_comp = _create_comparison_histogram(img_original, img_result, 'gray')
-            st.pyplot(fig_gray_comp)
+            st.pyplot(fig_gray_comp, clear_figure=True)
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -372,8 +374,7 @@ def render_analysis_section(img_original, img_result):
                     data=_fig_to_bytes(fig_gray_comp),
                     file_name="histograma_comparativo_gris.png",
                     mime="image/png",
-                    key="dl_gray_comp",
-                    use_container_width=True
+                    key=f"dl_gray_comp_{widget_key}"
                 )
         
         # Tab 3: Luminancia (Y, V, L)
@@ -382,7 +383,7 @@ def render_analysis_section(img_original, img_result):
             
             # Vista general con los 3 canales
             fig_lum_all = _create_luminance_histogram(img_original, img_result)
-            st.pyplot(fig_lum_all)
+            st.pyplot(fig_lum_all, clear_figure=True)
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -391,8 +392,7 @@ def render_analysis_section(img_original, img_result):
                     data=_fig_to_bytes(fig_lum_all),
                     file_name="histograma_luminancia_YVL.png",
                     mime="image/png",
-                    key="dl_lum_all",
-                    use_container_width=True
+                    key=f"dl_lum_all_{widget_key}"
                 )
             
             st.markdown("---")
@@ -406,11 +406,11 @@ def render_analysis_section(img_original, img_result):
                     'V': '💡 V - Valor (HSV)', 
                     'L': '☀️ L - Lightness (LAB)'
                 }[x],
-                key="lum_channel_select"
+                key=f"lum_channel_select_{widget_key}"
             )
             
             fig_lum_single = _create_single_luminance_histogram(img_original, img_result, lum_channel)
-            st.pyplot(fig_lum_single)
+            st.pyplot(fig_lum_single, clear_figure=True)
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -419,8 +419,7 @@ def render_analysis_section(img_original, img_result):
                     data=_fig_to_bytes(fig_lum_single),
                     file_name=f"histograma_luminancia_{lum_channel}.png",
                     mime="image/png",
-                    key=f"dl_lum_{lum_channel}",
-                    use_container_width=True
+                    key=f"dl_lum_{lum_channel}_{widget_key}"
                 )
         
         # Tab 4: Por canal RGB individual
@@ -429,11 +428,11 @@ def render_analysis_section(img_original, img_result):
                 "Seleccionar canal:",
                 ['red', 'green', 'blue'],
                 format_func=lambda x: {'red': '🔴 Rojo', 'green': '🟢 Verde', 'blue': '🔵 Azul'}[x],
-                key="channel_select"
+                key=f"channel_select_{widget_key}"
             )
             
             fig_channel = _create_comparison_histogram(img_original, img_result, channel_selected)
-            st.pyplot(fig_channel)
+            st.pyplot(fig_channel, clear_figure=True)
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -442,14 +441,13 @@ def render_analysis_section(img_original, img_result):
                     data=_fig_to_bytes(fig_channel),
                     file_name=f"histograma_canal_{channel_selected}.png",
                     mime="image/png",
-                    key=f"dl_channel_{channel_selected}",
-                    use_container_width=True
+                    key=f"dl_channel_{channel_selected}_{widget_key}"
                 )
         
         # Tab 5: Estadísticas
         with tab5:
             fig_stats = _create_stats_figure(img_original, img_result)
-            st.pyplot(fig_stats)
+            st.pyplot(fig_stats, clear_figure=True)
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -458,8 +456,7 @@ def render_analysis_section(img_original, img_result):
                     data=_fig_to_bytes(fig_stats),
                     file_name="estadisticas_comparativa.png",
                     mime="image/png",
-                    key="dl_stats",
-                    use_container_width=True
+                    key=f"dl_stats_{widget_key}"
                 )
             
             # Tabla de estadísticas numéricas
@@ -485,25 +482,23 @@ def render_analysis_section(img_original, img_result):
                 st.markdown(f"- Desv. Std: `{np.std(gray_result):.2f}`")
                 st.markdown(f"- Rango: `{np.min(gray_result):.0f}` - `{np.max(gray_result):.0f}`")
 
-
 def render_image_viewer(img_original, img_result):
     """
     Renderiza el visor de imágenes lado a lado.
-    
-    Args:
-        img_original: Imagen original (numpy array)
-        img_result: Imagen procesada (numpy array)
     """
+    # Asegurar que las imágenes son uint8 contiguos en memoria
+    img_original = np.ascontiguousarray(img_original, dtype=np.uint8)
+    img_result = np.ascontiguousarray(img_result, dtype=np.uint8)
+    
     col_orig, col_result = st.columns(2)
     
     with col_orig:
         st.subheader("Original")
-        st.image(img_original, use_container_width=True)
+        st.image(img_original, width='stretch')
     
     with col_result:
         st.subheader("Resultado")
-        st.image(img_result, use_container_width=True, clamp=True)
-
+        st.image(img_result, width='stretch', clamp=True)
 
 def render_download_button(img_result):
     """
@@ -531,7 +526,7 @@ def render_download_button(img_result):
         data=buf.getvalue(),
         file_name=filename,
         mime="image/png",
-        use_container_width=True
+        width='stretch'
     )
 
 
@@ -613,7 +608,7 @@ def render_filter_queue():
         st.markdown("---")
         
         # Botón para limpiar todo
-        if st.button("🗑️ Limpiar todo", use_container_width=True, type="secondary"):
+        if st.button("🗑️ Limpiar todo", width='stretch', type="secondary"):
             st.session_state.filtros_activos = []
             st.rerun()
     
@@ -640,7 +635,7 @@ def render_area_analysis_section(img_result):
         
         contar_blancos = st.checkbox("Contar píxeles blancos (área deforestada)", value=True)
         
-        if st.button("📊 Calcular Área", use_container_width=True):
+        if st.button("📊 Calcular Área", width='stretch'):
             analizador = AnalisisArea.desde_escala(pixels_escala, km_escala)
             resultado = analizador.calcular_area(img_result, contar_blancos)
             

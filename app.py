@@ -23,6 +23,7 @@ Estructura:
 
 import streamlit as st
 from ui.components import render_area_analysis_section
+import matplotlib.pyplot as plt
 from core import apply_filter_chain, load_image
 from ui import (
     render_sidebar,
@@ -114,6 +115,8 @@ with col_main:
         else:
             result_img = img_rgb
         
+
+
         # ================================================================
         # VISUALIZACIÓN
         # ================================================================
@@ -149,6 +152,12 @@ with col_main:
 
 with col_queue:
     render_filter_queue()
+# ============================================================================
+# LIMPIEZA
+# ============================================================================
+
+# Limpiar figuras matplotlib al final de cada ejecución
+    plt.close('all')
 
 # ============================================================================
 # FOOTER

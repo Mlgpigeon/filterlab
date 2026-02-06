@@ -170,7 +170,6 @@ def render_filter_controls(filter_dict, section_title, section_icon):
                 if st.button(
                     f"❌ Quitar {info['nombre']}", 
                     key=f"remove_{key}", 
-                    use_container_width=True
                 ):
                     st.session_state.filtros_activos.remove(key)
                     st.rerun()
@@ -178,7 +177,6 @@ def render_filter_controls(filter_dict, section_title, section_icon):
                 if st.button(
                     f"➕ Añadir {info['nombre']}", 
                     key=f"add_{key}", 
-                    use_container_width=True
                 ):
                     st.session_state.filtros_activos.append(key)
                     st.rerun()

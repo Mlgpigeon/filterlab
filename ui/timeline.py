@@ -16,18 +16,22 @@ def render_frame_timeline(start_year: int = 2000):
         return None
     
     n_frames = st.session_state.gif_n_frames
-    current_idx = st.session_state.get('current_frame_idx', 0)
+    
+    # IMPORTANTE: Leer directamente de session_state, NO hacer una copia local
+    if 'current_frame_idx' not in st.session_state:
+        st.session_state.current_frame_idx = 0
     
     # Asegurar que el índice está en rango válido
-    if current_idx >= n_frames:
-        current_idx = n_frames - 1
-        st.session_state.current_frame_idx = current_idx
+    if st.session_state.current_frame_idx >= n_frames:
+        st.session_state.current_frame_idx = n_frames - 1
+    
+    current_idx = st.session_state.current_frame_idx  # Solo para mostrar info
     
     st.markdown("---")
     st.markdown("### 🎬 Timeline de Frames")
     
-    current_year = start_year + current_idx
-    st.markdown(f"**Frame {current_idx + 1} de {n_frames}** | Año: **{current_year}**")
+    current_year = start_year + st.session_state.current_frame_idx
+    st.markdown(f"**Frame {st.session_state.current_frame_idx + 1} de {n_frames}** | Año: **{current_year}**")
     
     # Controles de navegación
     col_first, col_prev, col_slider, col_next, col_last = st.columns([1, 1, 6, 1, 1])
@@ -37,8 +41,7 @@ def render_frame_timeline(start_year: int = 2000):
             "⏮️", 
             key="btn_first", 
             help="Ir al primer frame", 
-            use_container_width=True, 
-            disabled=(current_idx == 0),
+            disabled=(st.session_state.current_frame_idx == 0),
             on_click=_go_to_frame,
             args=(0,)
         )
@@ -48,35 +51,32 @@ def render_frame_timeline(start_year: int = 2000):
             "◀️", 
             key="btn_prev", 
             help="Frame anterior", 
-            use_container_width=True, 
-            disabled=(current_idx == 0),
+            disabled=(st.session_state.current_frame_idx == 0),
             on_click=_go_to_frame,
-            args=(max(0, current_idx - 1),)
+            args=(max(0, st.session_state.current_frame_idx - 1),)
         )
     
     with col_slider:
-        new_idx = st.slider(
+        # CLAVE: El slider debe leer Y escribir directamente en session_state
+        st.slider(
             "Frame",
             min_value=0,
             max_value=n_frames - 1,
-            value=current_idx,
-            format=f"Frame %d (Año {start_year} + idx)",
-            key="frame_slider",
-            label_visibility="collapsed"
+            value=st.session_state.current_frame_idx,  # Lee el valor actual
+            format=f"Frame %d",
+            key="frame_slider_control",  # Nombre diferente para evitar conflictos
+            label_visibility="collapsed",
+            on_change=lambda: setattr(st.session_state, 'current_frame_idx', st.session_state.frame_slider_control)
         )
-        if new_idx != current_idx:
-            st.session_state.current_frame_idx = new_idx
-            st.rerun()
     
     with col_next:
         st.button(
             "▶️", 
             key="btn_next", 
             help="Frame siguiente", 
-            use_container_width=True, 
-            disabled=(current_idx >= n_frames - 1),
+            disabled=(st.session_state.current_frame_idx >= n_frames - 1),
             on_click=_go_to_frame,
-            args=(min(n_frames - 1, current_idx + 1),)
+            args=(min(n_frames - 1, st.session_state.current_frame_idx + 1),)
         )
     
     with col_last:
@@ -84,16 +84,15 @@ def render_frame_timeline(start_year: int = 2000):
             "⏭️", 
             key="btn_last", 
             help="Ir al último frame", 
-            use_container_width=True, 
-            disabled=(current_idx >= n_frames - 1),
+            disabled=(st.session_state.current_frame_idx >= n_frames - 1),
             on_click=_go_to_frame,
             args=(n_frames - 1,)
         )
     
     # Mostrar barra de años
-    _render_year_bar(n_frames, current_idx, start_year)
+    _render_year_bar(n_frames, st.session_state.current_frame_idx, start_year)
     
-    return current_idx
+    return st.session_state.current_frame_idx
 
 def _render_year_bar(n_frames: int, current_idx: int, start_year: int):
     """

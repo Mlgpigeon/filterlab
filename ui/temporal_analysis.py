@@ -34,7 +34,7 @@ def render_temporal_analysis_section():
         with col4:
             contar_blancos = st.checkbox("Contar blancos (deforestado)", value=True, key="temp_blancos")
         
-        if st.button("🚀 Procesar Toda la Serie", use_container_width=True, type="primary"):
+        if st.button("🚀 Procesar Toda la Serie", type="primary"):
             _run_temporal_analysis(pixels_escala, km_escala, start_year, contar_blancos)
         
         # Mostrar resultados si existen
@@ -92,56 +92,82 @@ def _display_temporal_results(start_year):
     years = [r['year'] for r in results]
     areas = [r['area_km2'] for r in results]
     
+    # Calcular estadísticas
+    stats = _create_statistics_summary(results)
+    
     # Tabs para diferentes visualizaciones
-    tab1, tab2, tab3 = st.tabs(["📊 Área Acumulada", "📈 Deforestación Anual", "📋 Datos"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Resumen Ejecutivo", 
+        "📈 Gráficos Comparativos",
+        "📉 Períodos Críticos",
+        "📋 Datos Completos"
+    ])
     
     with tab1:
-        fig1 = _create_accumulated_chart(years, areas)
-        st.pyplot(fig1)
-        st.download_button(
-            "📥 Descargar gráfico",
-            data=_fig_to_bytes(fig1),
-            file_name="area_acumulada.png",
-            mime="image/png"
-        )
+        st.markdown("### Resumen Estadístico")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Área Inicial (2000)", f"{stats['area_inicial']:.0f} km²")
+        with col2:
+            st.metric("Área Final (2019)", f"{stats['area_total']:.0f} km²")
+        with col3:
+            st.metric("Cambio Total", f"+{stats['cambio_total']:.0f} km²", 
+                     delta=f"{(stats['cambio_total']/stats['area_inicial']*100):.1f}%")
+        with col4:
+            slope = np.polyfit(range(len(areas)), areas, 1)[0]
+            st.metric("Tendencia", f"{slope:.2f} km²/año")
+        
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Promedio Anual", f"{stats['promedio']:.0f} km²")
+        with col2:
+            st.metric("Mediana", f"{stats['mediana']:.0f} km²")
+        with col3:
+            st.metric("Desviación Estándar", f"{stats['std']:.0f} km²")
     
     with tab2:
-        fig2 = _create_annual_chart(years, areas)
-        st.pyplot(fig2)
+        fig_comp = _create_comparison_plot(years, areas)
+        st.pyplot(fig_comp, clear_figure=True)
         st.download_button(
-            "📥 Descargar gráfico",
-            data=_fig_to_bytes(fig2),
-            file_name="deforestacion_anual.png",
-            mime="image/png"
+            "📥 Descargar gráfico combinado",
+            data=_fig_to_bytes(fig_comp),
+            file_name="comparacion_acumulado_anual.png",
+            mime="image/png",
+            key="dl_temporal_comp"
         )
     
     with tab3:
-        # Tabla de datos
-        st.dataframe(results, use_container_width=True)
+        st.markdown(f"### Períodos Críticos de Deforestación")
+        st.caption(f"Años con deforestación > {stats['promedio'] + stats['std']:.0f} km² "
+                  f"(promedio + 1 desviación estándar)")
         
-        # CSV export
+        if stats['critical_years']:
+            critical_df = {
+                'Año': [r['year'] for r in stats['critical_years']],
+                'Área (km²)': [f"{r['area_km2']:.2f}" for r in stats['critical_years']],
+                'Desviación': [f"+{r['area_km2'] - stats['promedio']:.2f}" for r in stats['critical_years']]
+            }
+            st.dataframe(critical_df, width='stretch')
+            
+            avg_critical = np.mean([r['area_km2'] for r in stats['critical_years']])
+            st.info(f"📌 Deforestación promedio en períodos críticos: **{avg_critical:.0f} km²**")
+        else:
+            st.success("✅ No se detectaron períodos críticos significativos")
+    
+    with tab4:
+        st.dataframe(results, width='stretch')
+        
         csv = _results_to_csv(results)
         st.download_button(
             "📥 Descargar CSV",
             data=csv,
-            file_name="analisis_temporal.csv",
-            mime="text/csv"
+            file_name="analisis_temporal_jamanxim.csv",
+            mime="text/csv",
+            key="dl_temporal_csv"
         )
-        
-        # Estadísticas
-        st.markdown("### Estadísticas")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Área mínima", f"{min(areas):.2f} km²")
-        with col2:
-            st.metric("Área máxima", f"{max(areas):.2f} km²")
-        with col3:
-            st.metric("Cambio total", f"{areas[-1] - areas[0]:.2f} km²")
-        
-        # Tendencia lineal
-        if len(areas) > 1:
-            slope = np.polyfit(range(len(areas)), areas, 1)[0]
-            st.metric("Tendencia", f"{slope:.2f} km²/año")
 
 
 def _create_accumulated_chart(years, areas):
@@ -165,7 +191,6 @@ def _create_accumulated_chart(years, areas):
     
     plt.tight_layout()
     return fig
-
 
 def _create_annual_chart(years, areas):
     """Crea gráfico de deforestación anual (diferencias)."""
@@ -214,3 +239,75 @@ def _results_to_csv(results):
     for r in results:
         lines.append(f"{r['year']},{r['frame']},{r['area_km2']:.4f},{r['area_ha']:.4f},{r['porcentaje']:.2f},{r['pixels']}")
     return "\n".join(lines)
+
+def _create_statistics_summary(results):
+    """Crea resumen estadístico detallado."""
+    areas = [r['area_km2'] for r in results]
+    
+    # Calcular estadísticas
+    area_total = areas[-1]
+    area_inicial = areas[0]
+    cambio_total = area_total - area_inicial
+    promedio = np.mean(areas)
+    mediana = np.median(areas)
+    std = np.std(areas)
+    
+    # Identificar años críticos (desviaciones > 1 std)
+    threshold = promedio + std
+    critical_years = [r for r in results if r['area_km2'] > threshold]
+    
+    return {
+        'area_total': area_total,
+        'area_inicial': area_inicial,
+        'cambio_total': cambio_total,
+        'promedio': promedio,
+        'mediana': mediana,
+        'std': std,
+        'critical_years': critical_years,
+        'n_critical': len(critical_years)
+    }
+
+
+def _create_comparison_plot(years, areas):
+    """Crea gráfico combinado: acumulado vs anual."""
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    fig.patch.set_facecolor('#0E1117')
+    
+    # Gráfico 1: Acumulado
+    ax1.set_facecolor('#0E1117')
+    ax1.fill_between(years, areas, alpha=0.3, color='#FF6B6B')
+    ax1.plot(years, areas, color='#FF6B6B', linewidth=2, marker='o', markersize=4)
+    ax1.set_title('Área Acumulada', color='white', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Área (km²)', color='gray')
+    ax1.tick_params(colors='gray')
+    ax1.spines['bottom'].set_color('gray')
+    ax1.spines['left'].set_color('gray')
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.grid(True, alpha=0.2)
+    
+    # Gráfico 2: Anual
+    ax2.set_facecolor('#0E1117')
+    annual_change = [areas[0]] + [areas[i] - areas[i-1] for i in range(1, len(areas))]
+    colors = ['#4CAF50' if v >= 0 else '#2196F3' for v in annual_change]
+    ax2.bar(years, annual_change, color=colors, alpha=0.8, edgecolor='white', linewidth=0.5)
+    
+    # Línea de tendencia
+    z = np.polyfit(range(len(annual_change)), annual_change, 1)
+    p = np.poly1d(z)
+    ax2.plot(years, p(range(len(years))), '--', color='#FFD700', linewidth=2, 
+             label=f'Tendencia: {z[0]:.1f} km²/año')
+    
+    ax2.axhline(y=0, color='gray', linestyle='-', linewidth=0.5)
+    ax2.set_title('Deforestación Anual', color='white', fontsize=12, fontweight='bold')
+    ax2.set_xlabel('Año', color='gray')
+    ax2.set_ylabel('Cambio (km²)', color='gray')
+    ax2.tick_params(colors='gray')
+    ax2.spines['bottom'].set_color('gray')
+    ax2.spines['left'].set_color('gray')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax2.legend(facecolor='#1E1E1E', edgecolor='gray', labelcolor='white')
+    
+    plt.tight_layout()
+    return fig
