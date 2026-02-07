@@ -210,23 +210,6 @@ def apply_cloud_detection(img, gray, params):
     
     return _ensure_rgb(mask)
 
-
-def apply_overlay_mask(img, gray, params):
-    """Superpone la máscara binaria sobre la imagen original."""
-    alpha = float(params.get("alpha", 0.5))
-    color_r = int(params.get("color_r", 255))
-    color_g = int(params.get("color_g", 0))
-    color_b = int(params.get("color_b", 0))
-    
-    # Crear máscara de color
-    mask_colored = np.zeros_like(img)
-    binary_mask = gray > 127
-    mask_colored[binary_mask] = [color_r, color_g, color_b]
-    
-    # Blend
-    result = cv2.addWeighted(img, 1 - alpha, mask_colored, alpha, 0)
-    return result
-
 def apply_overlay_mask(img, gray, params):
     """Superpone la máscara binaria sobre la imagen original."""
     alpha = float(params.get("alpha", 0.6))
@@ -234,6 +217,13 @@ def apply_overlay_mask(img, gray, params):
     color_g = int(params.get("color_g", 0))
     color_b = int(params.get("color_b", 0))
     show_contours = params.get("show_contours", False)
+    
+    # img ya es la imagen preprocesada (colorida)
+    # gray es la máscara binaria
+    
+    # Asegurar que img es RGB
+    if len(img.shape) == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     
     # Crear máscara de color
     mask_colored = np.zeros_like(img)
@@ -246,9 +236,10 @@ def apply_overlay_mask(img, gray, params):
     # Contornos opcionales
     if show_contours:
         contours, _ = cv2.findContours(gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(result, contours, -1, (255, 255, 255), 2)
+        cv2.drawContours(result, contours, -1, (255, 255, 0), 2)
     
     return result
+
 
 SEGMENTATION_FILTERS = {
     "umbral_manual": apply_umbral_manual,

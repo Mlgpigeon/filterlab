@@ -169,8 +169,8 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Reduce objetos eliminando píxeles en bordes.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 2, "label": "Tamaño kernel"},
-            "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
+            "kernel_size": {"min": 1, "max": 51, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 20, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
     "dilatacion": {
@@ -178,8 +178,8 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Expande objetos añadiendo píxeles en bordes.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 2, "label": "Tamaño kernel"},
-            "iterations": {"min": 1, "max": 5, "default": 1, "step": 1, "label": "Iteraciones"}
+            "kernel_size": {"min": 1, "max": 51, "default": 3, "step": 1, "label": "Tamaño kernel"},
+            "iterations": {"min": 1, "max": 20, "default": 1, "step": 1, "label": "Iteraciones"}
         }
     },
     "apertura": {
@@ -187,7 +187,7 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Erosión + Dilatación. Elimina ruido pequeño.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 51, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "clausura": {
@@ -195,7 +195,7 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Dilatación + Erosión. Cierra huecos pequeños.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 1, "max": 15, "default": 3, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 51, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "tophat": {
@@ -203,7 +203,7 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Extrae objetos brillantes menores que el kernel.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 3, "max": 15, "default": 5, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 51, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "blackhat": {
@@ -211,7 +211,7 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Extrae objetos oscuros menores que el kernel.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 3, "max": 15, "default": 5, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 51, "default": 5, "step": 1, "label": "Tamaño kernel"}
         }
     },
     "gradiente": {
@@ -219,7 +219,7 @@ FILTROS_MORFOLOGICOS = {
         "descripcion": "Dilatación - Erosión. Detecta contornos.",
         "categoria": "morfologico",
         "params": {
-            "kernel_size": {"min": 1, "max": 11, "default": 3, "step": 2, "label": "Tamaño kernel"}
+            "kernel_size": {"min": 1, "max": 51, "default": 3, "step": 1, "label": "Tamaño kernel"}
         }
     }
 }
@@ -247,8 +247,8 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Umbral local por bloques. Ideal para iluminación no uniforme.",
         "categoria": "segmentacion",
         "params": {
-            "block_size": {"min": 3, "max": 99, "default": 35, "step": 2, "label": "Tamaño bloque"},
-            "c": {"min": -20, "max": 20, "default": 5, "step": 1, "label": "Constante C"},
+            "block_size": {"min": 3, "max": 255, "default": 35, "step": 2, "label": "Tamaño bloque"},
+            "c": {"min": -255, "max": 255, "default": 5, "step": 1, "label": "Constante C"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -257,8 +257,8 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Umbral local basado en media de vecinos.",
         "categoria": "segmentacion",
         "params": {
-            "block_size": {"min": 3, "max": 99, "default": 35, "step": 2, "label": "Tamaño bloque"},
-            "c": {"min": -20, "max": 20, "default": 5, "step": 1, "label": "Constante C"},
+            "block_size": {"min": 3, "max": 255, "default": 35, "step": 2, "label": "Tamaño bloque"},
+            "c": {"min": -255, "max": 255, "default": 5, "step": 1, "label": "Constante C"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -267,12 +267,12 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Segmenta por rangos de color en espacio HSV.",
         "categoria": "segmentacion_color",
         "params": {
-            "h_min": {"min": 0, "max": 179, "default": 35, "step": 1, "label": "H mínimo"},
-            "h_max": {"min": 0, "max": 179, "default": 85, "step": 1, "label": "H máximo"},
-            "s_min": {"min": 0, "max": 255, "default": 40, "step": 5, "label": "S mínimo"},
-            "s_max": {"min": 0, "max": 255, "default": 255, "step": 5, "label": "S máximo"},
-            "v_min": {"min": 0, "max": 255, "default": 40, "step": 5, "label": "V mínimo"},
-            "v_max": {"min": 0, "max": 255, "default": 255, "step": 5, "label": "V máximo"},
+            "h_min": {"min": 0, "max": 179, "default": 0, "step": 1, "label": "H mínimo"},
+            "h_max": {"min": 0, "max": 179, "default": 179, "step": 1, "label": "H máximo"},
+            "s_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "S mínimo"},
+            "s_max": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "S máximo"},
+            "v_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "V mínimo"},
+            "v_max": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "V máximo"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -281,9 +281,10 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Preset para detectar vegetación/zonas verdes.",
         "categoria": "segmentacion_color",
         "params": {
-            "tolerancia": {"min": 5, "max": 50, "default": 25, "step": 5, "label": "Tolerancia H"},
-            "saturacion_min": {"min": 0, "max": 100, "default": 30, "step": 5, "label": "Saturación mín"},
-            "brillo_min": {"min": 0, "max": 100, "default": 30, "step": 5, "label": "Brillo mín"},
+            "h_centro": {"min": 0, "max": 179, "default": 60, "step": 1, "label": "H centro (matiz verde)"},
+            "tolerancia": {"min": 0, "max": 179, "default": 40, "step": 1, "label": "Tolerancia H"},
+            "saturacion_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Saturación mín"},
+            "brillo_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Brillo mín"},
             "invert": {"default": False, "label": "Invertir (mostrar NO verde)"}
         }
     },
@@ -292,9 +293,10 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Preset para detectar suelo/tierra/deforestación.",
         "categoria": "segmentacion_color",
         "params": {
-            "tolerancia": {"min": 5, "max": 30, "default": 15, "step": 5, "label": "Tolerancia H"},
-            "saturacion_min": {"min": 0, "max": 100, "default": 20, "step": 5, "label": "Saturación mín"},
-            "brillo_min": {"min": 0, "max": 100, "default": 40, "step": 5, "label": "Brillo mín"},
+            "h_centro": {"min": 0, "max": 179, "default": 20, "step": 1, "label": "H centro (matiz marrón)"},
+            "tolerancia": {"min": 0, "max": 179, "default": 45, "step": 1, "label": "Tolerancia H"},
+            "saturacion_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Saturación mín"},
+            "brillo_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Brillo mín"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -303,12 +305,12 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Segmenta por rangos en espacio CIE Lab.",
         "categoria": "segmentacion_color",
         "params": {
-            "l_min": {"min": 0, "max": 255, "default": 0, "step": 5, "label": "L mínimo"},
-            "l_max": {"min": 0, "max": 255, "default": 255, "step": 5, "label": "L máximo"},
-            "a_min": {"min": 0, "max": 255, "default": 0, "step": 5, "label": "a mínimo"},
-            "a_max": {"min": 0, "max": 255, "default": 128, "step": 5, "label": "a máximo"},
-            "b_min": {"min": 0, "max": 255, "default": 0, "step": 5, "label": "b mínimo"},
-            "b_max": {"min": 0, "max": 255, "default": 255, "step": 5, "label": "b máximo"},
+            "l_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "L mínimo"},
+            "l_max": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "L máximo"},
+            "a_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "a mínimo"},
+            "a_max": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "a máximo"},
+            "b_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "b mínimo"},
+            "b_max": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "b máximo"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -317,8 +319,8 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Detecta vegetación usando canal 'a' (verde-rojo).",
         "categoria": "segmentacion_color",
         "params": {
-            "sensibilidad": {"min": 100, "max": 140, "default": 120, "step": 2, "label": "Umbral 'a'"},
-            "luminosidad_min": {"min": 0, "max": 100, "default": 20, "step": 5, "label": "Luminosidad mín"},
+            "sensibilidad": {"min": 0, "max": 255, "default": 120, "step": 1, "label": "Umbral 'a' (menos=más verde)"},
+            "luminosidad_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Luminosidad mín"},
             "invert": {"default": False, "label": "Invertir (mostrar NO vegetación)"}
         }
     },
@@ -327,9 +329,9 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Detecta suelo expuesto usando canales 'a' y 'b'.",
         "categoria": "segmentacion_color",
         "params": {
-            "a_min": {"min": 100, "max": 150, "default": 128, "step": 2, "label": "a mínimo (rojo)"},
-            "b_min": {"min": 100, "max": 150, "default": 128, "step": 2, "label": "b mínimo (amarillo)"},
-            "luminosidad_min": {"min": 0, "max": 100, "default": 30, "step": 5, "label": "Luminosidad mín"},
+            "a_min": {"min": 0, "max": 255, "default": 128, "step": 1, "label": "a mínimo (rojo)"},
+            "b_min": {"min": 0, "max": 255, "default": 128, "step": 1, "label": "b mínimo (amarillo)"},
+            "luminosidad_min": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Luminosidad mín"},
             "invert": {"default": False, "label": "Invertir"}
         }
     },
@@ -354,9 +356,9 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Detecta nubes usando HSV+LAB. Ideal para preprocesar imágenes satelitales.",
         "categoria": "segmentacion_color",
         "params": {
-            "v_threshold": {"min": 150, "max": 255, "default": 200, "step": 5, "label": "Umbral V (brillo)"},
-            "s_threshold": {"min": 10, "max": 100, "default": 50, "step": 5, "label": "Umbral S máx"},
-            "l_threshold": {"min": 150, "max": 255, "default": 200, "step": 5, "label": "Umbral L (luminosidad)"},
+            "v_threshold": {"min": 0, "max": 255, "default": 180, "step": 1, "label": "Umbral V (brillo)"},
+            "s_threshold": {"min": 0, "max": 255, "default": 60, "step": 1, "label": "Umbral S máx"},
+            "l_threshold": {"min": 0, "max": 255, "default": 180, "step": 1, "label": "Umbral L (luminosidad)"},
             "invert": {"default": False, "label": "Invertir (mostrar NO nubes)"}
         }
     },
@@ -365,14 +367,13 @@ FILTROS_SEGMENTACION = {
         "descripcion": "Superpone la máscara binaria sobre la imagen original con color.",
         "categoria": "visualizacion",
         "params": {
-            "alpha": {"min": 0.1, "max": 1.0, "default": 0.6, "step": 0.1, "label": "Opacidad"},
-            "color_r": {"min": 0, "max": 255, "default": 255, "step": 10, "label": "Rojo"},
-            "color_g": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Verde"},
-            "color_b": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Azul"},
+            "alpha": {"min": 0.0, "max": 1.0, "default": 0.6, "step": 0.05, "label": "Opacidad"},
+            "color_r": {"min": 0, "max": 255, "default": 255, "step": 1, "label": "Rojo"},
+            "color_g": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Verde"},
+            "color_b": {"min": 0, "max": 255, "default": 0, "step": 1, "label": "Azul"},
             "show_contours": {"default": False, "label": "Mostrar contornos"}
         }
-}
-
+    }
 }
 
 
