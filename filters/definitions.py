@@ -362,15 +362,16 @@ FILTROS_SEGMENTACION = {
     },
     "overlay_mask": {
         "nombre": "🎭 Superponer Máscara",
-        "descripcion": "Superpone la imagen binaria actual sobre la original con color.",
+        "descripcion": "Superpone la máscara binaria sobre la imagen original con color.",
         "categoria": "visualizacion",
         "params": {
-            "alpha": {"min": 0.1, "max": 1.0, "default": 0.5, "step": 0.1, "label": "Opacidad"},
+            "alpha": {"min": 0.1, "max": 1.0, "default": 0.6, "step": 0.1, "label": "Opacidad"},
             "color_r": {"min": 0, "max": 255, "default": 255, "step": 10, "label": "Rojo"},
             "color_g": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Verde"},
-            "color_b": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Azul"}
+            "color_b": {"min": 0, "max": 255, "default": 0, "step": 10, "label": "Azul"},
+            "show_contours": {"default": False, "label": "Mostrar contornos"}
         }
-    },
+}
 
 }
 

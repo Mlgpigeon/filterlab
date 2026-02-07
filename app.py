@@ -68,6 +68,37 @@ if 'filter_params' not in st.session_state:
 st.title("🔬 FilterLab")
 st.caption("Explorador de Filtros Espaciales y Morfológicos")
 
+with st.expander("📖 Guía: Análisis Temporal de Series de Imágenes", expanded=False):
+    st.markdown("""
+    ### Workflow Recomendado
+    
+    **1. Preprocesamiento (mejorar calidad visual):**
+    - 🔧 Recortar/Rotar (eliminar elementos no deseados)
+    - ☀️ CLAHE (mejorar contraste)
+    - 🔵 Bilateral (reducir ruido, preservar bordes)
+    
+    **2. Segmentación (identificar áreas de interés):**
+    - ✂️ Umbral (Otsu / Otsu Adaptativo)
+    - 🎨 Por Color (HSV / Lab)
+    - Combinar múltiples segmentaciones si es necesario
+    
+    **3. Refinamiento (mejorar máscaras binarias):**
+    - 🔷 Apertura (eliminar ruido pequeño)
+    - 🔷 Clausura (cerrar huecos)
+    - 📐 Detección de estructuras (opcional)
+    
+    **4. Visualización:**
+    - 🎭 Superponer Máscara (overlay sobre original)
+    
+    **5. Análisis Temporal:**
+    - Configurar escala (píxeles → km)
+    - Procesar serie completa
+    - Exportar resultados (CSV + gráficos)
+    
+    **💡 Tip:** Define tu escala de conversión según tu imagen.  
+    Ejemplo: Si 51 píxeles = 20 km, usa `pixels_escala=51, km_escala=20`
+    """)
+
 # Layout principal
 col_main, col_queue = st.columns([3, 1])
 

@@ -20,7 +20,7 @@ def render_temporal_analysis_section():
         return
     
     with st.expander("📈 Análisis Temporal (Serie Completa)", expanded=False):
-        st.caption("Procesa TODOS los frames del GIF y genera gráficos de evolución")
+        st.caption("Procesa todos los frames y genera análisis estadístico de evolución")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -28,7 +28,7 @@ def render_temporal_analysis_section():
         with col2:
             km_escala = st.number_input("Km en escala", value=20.0, min_value=0.1, key="temp_km")
         
-        contar_blancos = st.checkbox("Contar blancos (área segmentada)", value=True, key="temp_blancos")
+        contar_blancos = st.checkbox("Contar píxeles blancos (área de interés)", value=True, key="temp_blancos")
         
         if st.button("🚀 Procesar Toda la Serie", type="primary"):
             _run_temporal_analysis(pixels_escala, km_escala, contar_blancos)
@@ -90,12 +90,14 @@ def _display_temporal_results():
     stats = _create_statistics_summary(results)
     
     # Tabs para diferentes visualizaciones
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Resumen Ejecutivo", 
-        "📈 Gráficos Comparativos",
-        "📉 Períodos Críticos",
-        "📋 Datos Completos"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Resumen Estadístico", 
+        "📈 Gráficos",
+        "⚠️ Frames Críticos",
+        "📋 Datos Completos",
+        "📊 Tabla Visual"
     ])
+
     
     with tab1:
         st.markdown("### Resumen Estadístico")
@@ -136,9 +138,9 @@ def _display_temporal_results():
         )
     
     with tab3:
-        st.markdown(f"### Períodos Críticos")
+        st.markdown(f"### Frames con Valores Críticos")
         st.caption(f"Frames con área > {stats['promedio'] + stats['std']:.0f} km² "
-                  f"(promedio + 1 desviación estándar)")
+                f"(promedio + 1 desviación estándar)")
         
         if stats['critical_periods']:
             critical_df = {
@@ -149,9 +151,9 @@ def _display_temporal_results():
             st.dataframe(critical_df, use_container_width=True)
             
             avg_critical = np.mean([r['area_km2'] for r in stats['critical_periods']])
-            st.info(f"📌 Área promedio en períodos críticos: **{avg_critical:.0f} km²**")
+            st.info(f"📌 Área promedio en frames críticos: **{avg_critical:.0f} km²**")
         else:
-            st.success("✅ No se detectaron períodos críticos significativos")
+             st.success("✅ No se detectaron frames con valores significativamente superiores al promedio")
     
     with tab4:
         st.dataframe(results, use_container_width=True)
@@ -164,6 +166,20 @@ def _display_temporal_results():
             mime="text/csv",
             key="dl_temporal_csv"
         )
+    with tab5:
+        st.caption("Tabla de resultados con formato profesional para exportar")
+        fig_table = _create_results_table_figure(results)
+        st.pyplot(fig_table, clear_figure=True)
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.download_button(
+                "📥 Descargar tabla (PNG)",
+                data=_fig_to_bytes(fig_table),
+                file_name="tabla_resultados_frames.png",
+                mime="image/png",
+                key="dl_table_visual"
+            )
 
 
 def _create_statistics_summary(results):
@@ -193,49 +209,112 @@ def _create_statistics_summary(results):
 
 
 def _create_comparison_plot(frames, areas):
-    """Crea gráfico combinado: acumulado vs incremental."""
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-    fig.patch.set_facecolor('#0E1117')
+    """Crea gráfico combinado: acumulado, incremental y tendencia."""
+    import numpy as np
     
-    # Gráfico 1: Acumulado
-    ax1.set_facecolor('#0E1117')
-    ax1.fill_between(frames, areas, alpha=0.3, color='#FF6B6B')
-    ax1.plot(frames, areas, color='#FF6B6B', linewidth=2, marker='o', markersize=4)
-    ax1.set_title('Área Acumulada', color='white', fontsize=12, fontweight='bold')
-    ax1.set_ylabel('Área (km²)', color='gray')
-    ax1.tick_params(colors='gray')
-    ax1.spines['bottom'].set_color('gray')
-    ax1.spines['left'].set_color('gray')
-    ax1.spines['top'].set_visible(False)
-    ax1.spines['right'].set_visible(False)
-    ax1.grid(True, alpha=0.2)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
+    fig.patch.set_facecolor('white')
     
-    # Gráfico 2: Cambio incremental
-    ax2.set_facecolor('#0E1117')
-    incremental = [areas[0]] + [areas[i] - areas[i-1] for i in range(1, len(areas))]
-    colors = ['#4CAF50' if v >= 0 else '#2196F3' for v in incremental]
-    ax2.bar(frames, incremental, color=colors, alpha=0.8, edgecolor='white', linewidth=0.5)
+    # --- Gráfico 1: Área Acumulada ---
+    ax1.set_facecolor('white')
+    ax1.fill_between(frames, areas, alpha=0.4, color='#FF6B6B', label='Área Acumulada')
+    ax1.plot(frames, areas, color='#FF0000', linewidth=2.5, marker='o', markersize=6)
     
     # Línea de tendencia
-    z = np.polyfit(range(len(incremental)), incremental, 1)
+    z = np.polyfit(frames, areas, 1)
     p = np.poly1d(z)
-    ax2.plot(frames, p(range(len(frames))), '--', color='#FFD700', linewidth=2, 
-             label=f'Tendencia: {z[0]:.1f} km²/frame')
+    ax1.plot(frames, p(frames), '--', color='#000000', linewidth=2, 
+             label=f'Tendencia: y = {z[0]:.2f}x + {z[1]:.2f}')
     
-    ax2.axhline(y=0, color='gray', linestyle='-', linewidth=0.5)
-    ax2.set_title('Cambio Incremental', color='white', fontsize=12, fontweight='bold')
-    ax2.set_xlabel('Frame', color='gray')
-    ax2.set_ylabel('Cambio (km²)', color='gray')
-    ax2.tick_params(colors='gray')
-    ax2.spines['bottom'].set_color('gray')
-    ax2.spines['left'].set_color('gray')
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
-    ax2.legend(facecolor='#1E1E1E', edgecolor='gray', labelcolor='white')
+    ax1.set_title('Área Acumulada', fontsize=14, fontweight='bold', color='black')
+    ax1.set_ylabel('Área Acumulada (km²)', fontsize=11, color='black')
+    ax1.tick_params(colors='black')
+    ax1.legend(loc='upper left', fontsize=10)
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    
+    # --- Gráfico 2: Cambio Incremental ---
+    ax2.set_facecolor('white')
+    cambios = [areas[0]] + [areas[i] - areas[i-1] for i in range(1, len(areas))]
+    
+    colors = ['#4CAF50' if v >= 0 else '#F44336' for v in cambios]
+    ax2.bar(frames, cambios, color=colors, alpha=0.8, edgecolor='black', linewidth=0.8)
+    
+    # Valores en barras significativas
+    for i, (frame, cambio) in enumerate(zip(frames, cambios)):
+        if abs(cambio) > np.mean(np.abs(cambios)):
+            ax2.text(frame, cambio + (50 if cambio > 0 else -50), 
+                    f'{cambio:.0f}', ha='center', fontsize=8, fontweight='bold')
+    
+    ax2.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    ax2.set_title('Cambio Incremental por Frame', fontsize=14, fontweight='bold', color='black')
+    ax2.set_ylabel('Cambio (km²)', fontsize=11, color='black')
+    ax2.tick_params(colors='black')
+    ax2.grid(True, alpha=0.3, linestyle='--', axis='y')
+    
+    # --- Gráfico 3: Comparación Acumulado vs Incremental ---
+    ax3_twin = ax3.twinx()
+    
+    ax3.plot(frames, areas, color='#FF0000', linewidth=2.5, marker='o', 
+             markersize=6, label='Acumulado')
+    ax3_twin.bar(frames, cambios, alpha=0.6, color='#FFA500', 
+                 edgecolor='black', linewidth=0.5, label='Incremental', width=0.6)
+    
+    # Umbral crítico
+    threshold = np.mean(areas) + np.std(areas)
+    ax3.axhline(y=threshold, color='#FFD700', linestyle='--', linewidth=2, 
+                label=f'Umbral crítico: {threshold:.0f} km²')
+    
+    ax3.set_title('Comparación: Acumulado vs Incremental', fontsize=14, fontweight='bold', color='black')
+    ax3.set_xlabel('Frame', fontsize=11, color='black')
+    ax3.set_ylabel('Área Acumulada (km²)', fontsize=11, color='black')
+    ax3_twin.set_ylabel('Cambio Incremental (km²)', fontsize=11, color='#FFA500')
+    ax3.tick_params(colors='black')
+    ax3_twin.tick_params(colors='#FFA500')
+    ax3.legend(loc='upper left', fontsize=10)
+    ax3_twin.legend(loc='upper right', fontsize=10)
+    ax3.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
     return fig
 
+def _create_results_table_figure(results):
+    """Crea tabla visual de resultados."""
+    fig, ax = plt.subplots(figsize=(10, len(results) * 0.4 + 2))
+    fig.patch.set_facecolor('white')
+    ax.axis('tight')
+    ax.axis('off')
+    
+    # Preparar datos
+    table_data = [['Frame', 'Área (km²)', 'Área (ha)', 'Porcentaje (%)']]
+    for r in results:
+        table_data.append([
+            f"{r['frame']}", 
+            f"{r['area_km2']:.2f}",
+            f"{r['area_ha']:.2f}",
+            f"{r['porcentaje']:.2f}"
+        ])
+    
+    # Crear tabla
+    table = ax.table(cellText=table_data, cellLoc='center', loc='center',
+                     colWidths=[0.2, 0.3, 0.3, 0.3])
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    table.scale(1, 1.8)
+    
+    # Estilizar encabezado
+    for i in range(4):
+        table[(0, i)].set_facecolor('#4CAF50')
+        table[(0, i)].set_text_props(weight='bold', color='white')
+    
+    # Alternar colores
+    for i in range(1, len(table_data)):
+        color = '#F0F0F0' if i % 2 == 0 else 'white'
+        for j in range(4):
+            table[(i, j)].set_facecolor(color)
+    
+    plt.title('Resultados por Frame', fontsize=14, fontweight='bold', pad=20)
+    
+    return fig
 
 def _fig_to_bytes(fig):
     """Convierte figura a bytes."""

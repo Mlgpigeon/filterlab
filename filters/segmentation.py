@@ -227,6 +227,29 @@ def apply_overlay_mask(img, gray, params):
     result = cv2.addWeighted(img, 1 - alpha, mask_colored, alpha, 0)
     return result
 
+def apply_overlay_mask(img, gray, params):
+    """Superpone la máscara binaria sobre la imagen original."""
+    alpha = float(params.get("alpha", 0.6))
+    color_r = int(params.get("color_r", 255))
+    color_g = int(params.get("color_g", 0))
+    color_b = int(params.get("color_b", 0))
+    show_contours = params.get("show_contours", False)
+    
+    # Crear máscara de color
+    mask_colored = np.zeros_like(img)
+    binary_mask = gray > 127
+    mask_colored[binary_mask] = [color_r, color_g, color_b]
+    
+    # Blend
+    result = cv2.addWeighted(img, 1 - alpha, mask_colored, alpha, 0)
+    
+    # Contornos opcionales
+    if show_contours:
+        contours, _ = cv2.findContours(gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(result, contours, -1, (255, 255, 255), 2)
+    
+    return result
+
 SEGMENTATION_FILTERS = {
     "umbral_manual": apply_umbral_manual,
     "otsu": apply_otsu,
